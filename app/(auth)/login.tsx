@@ -38,7 +38,7 @@ export default function LoginScreen() {
 
       <PrimaryButton title="Login" onPress={handleLogin} />
 
-      <Text style={styles.link} onPress={() => router.push("/register")}>
+      <Text style={styles.link} onPress={() => router.push("/register" as any)}>
         Don’t have an account? Register
       </Text>
     </View>

@@ -8,7 +8,10 @@ export default function IndexScreen() {
       <Text style={styles.title}>Restaurant App</Text>
       <Text style={styles.subtitle}>Order your favourite meals anytime</Text>
 
-      <PrimaryButton title="Login" onPress={() => router.push("/login")} />
+      <PrimaryButton
+        title="Login"
+        onPress={() => router.push("/login" as any)}
+      />
 
       <PrimaryButton
         title="Browse Menu"
