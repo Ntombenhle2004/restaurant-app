@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet } from "react-native";
 import { router } from "expo-router";
-import PrimaryButton from "../components/PrimaryButton";
+import PrimaryButton from "./components/PrimaryButton";
 
 export default function IndexScreen() {
   return (
