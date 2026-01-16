@@ -1,60 +1,60 @@
-import { View, Text, StyleSheet, ScrollView, Alert } from "react-native";
-import { useState, useEffect } from "react";
-import { collection, getDocs } from "firebase/firestore";
-import { db } from "../../services/firebase";
-import PrimaryButton from "../components/PrimaryButton";
-import { router } from "expo-router";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { useRouter } from "expo-router";
 
 export default function AdminDashboard() {
-  const [foods, setFoods] = useState<any[]>([]);
-
-  const fetchFoods = async () => {
-    const snapshot = await getDocs(collection(db, "foods"));
-    const list: any[] = [];
-    snapshot.forEach((doc) => {
-      list.push({ id: doc.id, ...doc.data() });
-    });
-    setFoods(list);
-  };
-
-  useEffect(() => {
-    fetchFoods();
-  }, []);
+  const router = useRouter();
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <View style={styles.container}>
       <Text style={styles.title}>Admin Dashboard</Text>
 
-      <PrimaryButton
-        title="Add Food Item"
+      <TouchableOpacity
+        style={styles.button}
         onPress={() => router.push("/admin/manage-food")}
-      />
+      >
+        <Text style={styles.buttonText}>Manage Food Menu</Text>
+      </TouchableOpacity>
 
-      <Text style={styles.subtitle}>Current Foods</Text>
-      {foods.length === 0 && <Text>No food items added yet</Text>}
+      <TouchableOpacity
+        style={styles.button}
+        onPress={() => router.push("/admin/orders")}
+      >
+        <Text style={styles.buttonText}>View Orders</Text>
+      </TouchableOpacity>
 
-      {foods.map((food) => (
-        <View key={food.id} style={styles.foodItem}>
-          <Text style={styles.foodName}>{food.name}</Text>
-          <Text>{food.category}</Text>
-          <Text>Price: R{food.price}</Text>
-          <Text>Sides: {food.sides.join(", ")}</Text>
-        </View>
-      ))}
-    </ScrollView>
+      <TouchableOpacity
+        style={styles.button}
+        onPress={() => router.push("/admin/analytics")}
+      >
+        <Text style={styles.buttonText}>View Analytics</Text>
+      </TouchableOpacity>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 24 },
-  title: { fontSize: 28, fontWeight: "700", marginBottom: 24 },
-  subtitle: { fontSize: 20, marginTop: 20, marginBottom: 12 },
-  foodItem: {
-    padding: 12,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    marginBottom: 12,
+  container: {
+    flex: 1,
+    padding: 24,
+    justifyContent: "center",
+    backgroundColor: "#fff",
   },
-  foodName: { fontWeight: "600", fontSize: 16 },
+  title: {
+    fontSize: 26,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 40,
+  },
+  button: {
+    backgroundColor: "#000",
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  buttonText: {
+    color: "#fff",
+    textAlign: "center",
+    fontSize: 16,
+    fontWeight: "600",
+  },
 });
