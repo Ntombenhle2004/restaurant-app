@@ -27,10 +27,14 @@ export default function AdminDashboard() {
       <Text style={styles.title}>Admin Dashboard</Text>
 
       {/* Analytics Cards */}
-      <View style={styles.card}>
+      <TouchableOpacity
+        style={styles.card}
+        onPress={() => router.push("/admin/food-list")}
+      >
         <Text style={styles.cardTitle}>Total Food Items</Text>
         <Text style={styles.cardValue}>{foodCount}</Text>
-      </View>
+        <Text style={styles.cardHint}>Tap to view all food items</Text>
+      </TouchableOpacity>
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Total Orders</Text>
@@ -93,5 +97,10 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 16,
     fontWeight: "600",
+  },
+  cardHint: {
+    marginTop: 6,
+    fontSize: 12,
+    color: "#888",
   },
 });
