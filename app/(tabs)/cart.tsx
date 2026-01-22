@@ -97,7 +97,7 @@ export default function Cart() {
       Alert.alert("Cart Empty", "Please add items to cart before checkout.");
       return;
     }
-    router.push("/(user)/checkout");
+    router.push("/checkout");
   };
 
   return (
