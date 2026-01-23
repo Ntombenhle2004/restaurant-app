@@ -482,7 +482,6 @@
 
 
 
-
 import {
   View,
   Text,
@@ -516,16 +515,21 @@ export default function FoodDetails() {
   const [removed, setRemoved] = useState<string[]>([]);
   const [qty, setQty] = useState(1);
 
+  /** 🔥 FIX: react to ID changes */
   useEffect(() => {
-    loadFood();
-  }, []);
+    if (id) loadFood(id);
+  }, [id]);
 
-  const loadFood = async () => {
-    const snap = await getDoc(doc(db, "foods", id));
+  const loadFood = async (foodId: string) => {
+    const snap = await getDoc(doc(db, "foods", foodId));
     if (!snap.exists()) return;
 
     const data = snap.data();
-    setFood(data);
+    setFood({ id: snap.id, ...data });
+
+    setSelectedAddons([]);
+    setRemoved([]);
+    setQty(1);
 
     if (data.addons?.length) {
       const addonDocs = await Promise.all(
@@ -537,6 +541,8 @@ export default function FoodDetails() {
           .filter((d) => d.exists())
           .map((d) => ({ id: d.id, ...(d.data() as any) }))
       );
+    } else {
+      setAddons([]);
     }
   };
 
@@ -568,7 +574,7 @@ export default function FoodDetails() {
 
     cart.push({
       id: Date.now().toString(),
-      foodId: id,
+      foodId: food.id,
       name: food.name,
       image: food.image,
       basePrice: food.price,
@@ -580,9 +586,10 @@ export default function FoodDetails() {
 
     await AsyncStorage.setItem("cart", JSON.stringify(cart));
     Alert.alert("Added to cart");
+    router.back();
   };
 
-  if (!food) return null;
+  if (!food) return <Text style={{ padding: 20 }}>Loading...</Text>;
 
   return (
     <ScrollView style={styles.container}>
@@ -596,12 +603,12 @@ export default function FoodDetails() {
         {/* ADD-ONS */}
         {addons.length > 0 && (
           <>
-            <Text style={styles.section}>Would you like to add?</Text>
+            <Text style={styles.section}>Add-ons</Text>
 
             {addons.map((a) => (
               <TouchableOpacity
                 key={a.id}
-                style={styles.addonRow}
+                style={styles.row}
                 onPress={() => toggleAddon(a.id)}
               >
                 <Ionicons
@@ -614,8 +621,8 @@ export default function FoodDetails() {
                 />
                 <Image source={{ uri: a.image }} style={styles.addonImg} />
                 <View>
-                  <Text style={styles.addonName}>{a.name}</Text>
-                  <Text style={styles.addonPrice}>+R {a.price}</Text>
+                  <Text style={styles.rowTitle}>{a.name}</Text>
+                  <Text style={styles.rowSub}>+R {a.price}</Text>
                 </View>
               </TouchableOpacity>
             ))}
@@ -663,8 +670,9 @@ export default function FoodDetails() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
-  image: { width: "100%", height: 240 },
+  image: { width: "100%", height: 260 },
   content: { padding: 16 },
+
   name: { fontSize: 22, fontWeight: "bold" },
   desc: { color: "#555", marginVertical: 6 },
   price: { fontSize: 18, fontWeight: "600" },
@@ -675,17 +683,17 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
 
-  addonRow: {
+  row: {
     flexDirection: "row",
     alignItems: "center",
+    backgroundColor: "#F6F6F6",
     padding: 12,
-    backgroundColor: "#F7F7F7",
-    borderRadius: 10,
+    borderRadius: 12,
     marginTop: 10,
   },
-  addonImg: { width: 50, height: 50, marginHorizontal: 12 },
-  addonName: { fontWeight: "600" },
-  addonPrice: { color: "#555" },
+  addonImg: { width: 45, height: 45, marginHorizontal: 12 },
+  rowTitle: { fontWeight: "600" },
+  rowSub: { color: "#555" },
 
   removeRow: {
     flexDirection: "row",
@@ -705,7 +713,7 @@ const styles = StyleSheet.create({
   cartBtn: {
     backgroundColor: "#000",
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 14,
     alignItems: "center",
   },
   cartText: { color: "#fff", fontSize: 16, fontWeight: "600" },
