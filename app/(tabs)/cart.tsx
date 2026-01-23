@@ -1,4 +1,3 @@
-
 import {
   View,
   Text,
@@ -15,10 +14,12 @@ import { useRouter, useFocusEffect } from "expo-router";
 
 type CartItem = {
   id: string;
+  foodId: string;
   name: string;
   price: number;
   quantity: number;
   image: string;
+  total?: number;
 };
 
 const APP_COLOR = "#000";
@@ -27,7 +28,6 @@ export default function CartScreen() {
   const router = useRouter();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
 
-  // Reload cart every time screen opens
   useFocusEffect(
     useCallback(() => {
       loadCart();
@@ -86,9 +86,8 @@ const confirmDelete = (id: string) => {
 };
 
 
-
-  const getTotal = () =>
-    cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+const getTotal = () =>
+  cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   if (cartItems.length === 0) {
     return (
@@ -111,7 +110,7 @@ const confirmDelete = (id: string) => {
             onPress={() =>
               router.push({
                 pathname: "/food-details",
-                params: { id: item.id },
+                params: { id: item.foodId },
               })
             }
           >
@@ -119,7 +118,10 @@ const confirmDelete = (id: string) => {
 
             <View style={styles.info}>
               <Text style={styles.name}>{item.name}</Text>
-              <Text style={styles.price}>R {item.price}</Text>
+
+              <Text style={styles.price}>
+                R {item.total ? item.total : item.price * item.quantity}
+              </Text>
 
               <View style={styles.rowBetween}>
                 <View style={styles.qtyRow}>
