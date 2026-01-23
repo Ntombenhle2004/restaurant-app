@@ -1,9 +1,10 @@
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { CartProvider } from "./context/cartContext"; // make sure path matches
 
 export default function RootLayout() {
   return (
-    <>
+    <CartProvider>
       <StatusBar style="dark" />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
@@ -13,6 +14,6 @@ export default function RootLayout() {
         <Stack.Screen name="checkout" options={{ headerShown: false }} />
         <Stack.Screen name="admin" />
       </Stack>
-    </>
+    </CartProvider>
   );
 }

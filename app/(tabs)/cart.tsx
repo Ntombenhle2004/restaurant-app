@@ -1,16 +1,17 @@
-import React, { useEffect, useState } from "react";
+
 import {
   View,
   Text,
   StyleSheet,
   FlatList,
   Image,
-  Alert,
   TouchableOpacity,
+  Alert,
 } from "react-native";
-import { Button, Icon } from "react-native-elements";
-import { useRouter } from "expo-router";
+import { useEffect, useState, useCallback } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Icon, Button } from "react-native-elements";
+import { useRouter, useFocusEffect } from "expo-router";
 
 type CartItem = {
   id: string;
@@ -20,136 +21,136 @@ type CartItem = {
   image: string;
 };
 
-export default function Cart() {
+const APP_COLOR = "#000";
+
+export default function CartScreen() {
   const router = useRouter();
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [total, setTotal] = useState(0);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
 
-  useEffect(() => {
-    loadCart();
-  }, []);
-
-  useEffect(() => {
-    calculateTotal();
-  }, [cart]);
+  // Reload cart every time screen opens
+  useFocusEffect(
+    useCallback(() => {
+      loadCart();
+    }, [])
+  );
 
   const loadCart = async () => {
     const storedCart = await AsyncStorage.getItem("cart");
-    if (storedCart) setCart(JSON.parse(storedCart));
+    if (storedCart) {
+      setCartItems(JSON.parse(storedCart));
+    } else {
+      setCartItems([]);
+    }
   };
 
   const saveCart = async (items: CartItem[]) => {
-    setCart(items);
+    setCartItems(items);
     await AsyncStorage.setItem("cart", JSON.stringify(items));
   };
 
-  const calculateTotal = () => {
-    const sum = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
-    setTotal(sum);
-  };
-
   const increaseQty = (id: string) => {
-    const updated = cart.map((item) =>
+    const updated = cartItems.map((item) =>
       item.id === id ? { ...item, quantity: item.quantity + 1 } : item
     );
     saveCart(updated);
   };
 
   const decreaseQty = (id: string) => {
-    const updated = cart.map((item) =>
-      item.id === id
-        ? { ...item, quantity: Math.max(item.quantity - 1, 1) }
-        : item
-    );
+    const updated = cartItems
+      .map((item) =>
+        item.id === id ? { ...item, quantity: item.quantity - 1 } : item
+      )
+      .filter((item) => item.quantity > 0);
+
     saveCart(updated);
   };
 
   const removeItem = (id: string) => {
-    Alert.alert("Confirm", "Remove this item from cart?", [
-      { text: "Cancel" },
-      {
-        text: "Remove",
-        style: "destructive",
-        onPress: () => {
-          const updated = cart.filter((item) => item.id !== id);
-          saveCart(updated);
-        },
-      },
-    ]);
+    const updated = cartItems.filter((item) => item.id !== id);
+    saveCart(updated);
   };
 
-  const clearCart = () => {
-    Alert.alert("Confirm", "Clear all items from cart?", [
-      { text: "Cancel" },
+const confirmDelete = (id: string) => {
+  Alert.alert(
+    "Remove item",
+    "Are you sure you want to remove this item from your cart?",
+    [
+      { text: "Cancel", style: "cancel" },
       {
-        text: "Clear",
+        text: "Delete",
         style: "destructive",
-        onPress: async () => {
-          setCart([]);
-          await AsyncStorage.removeItem("cart");
-        },
+        onPress: () => removeItem(id),
       },
-    ]);
-  };
+    ]
+  );
+};
 
-  const goToCheckout = () => {
-    if (cart.length === 0) {
-      Alert.alert("Cart Empty", "Please add items to cart before checkout.");
-      return;
-    }
-    router.push("/checkout");
-  };
+
+
+  const getTotal = () =>
+    cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+  if (cartItems.length === 0) {
+    return (
+      <View style={styles.empty}>
+        <Icon name="shopping-cart" type="feather" size={50} color="#ccc" />
+        <Text style={styles.emptyText}>Your cart is empty</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Your Cart</Text>
+      <FlatList
+        data={cartItems}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={styles.item}
+            activeOpacity={0.85}
+            onPress={() =>
+              router.push({
+                pathname: "/food-details",
+                params: { id: item.id },
+              })
+            }
+          >
+            <Image source={{ uri: item.image }} style={styles.image} />
 
-      {cart.length === 0 ? (
-        <Text style={styles.empty}>Your cart is empty</Text>
-      ) : (
-        <>
-          <FlatList
-            data={cart}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <View style={styles.item}>
-                <Image source={{ uri: item.image }} style={styles.image} />
-                <View style={styles.info}>
-                  <Text style={styles.name}>{item.name}</Text>
-                  <Text style={styles.price}>R {item.price}</Text>
-                  <View style={styles.qtyContainer}>
-                    <TouchableOpacity onPress={() => decreaseQty(item.id)}>
-                      <Icon name="minus" type="feather" />
-                    </TouchableOpacity>
-                    <Text style={styles.qty}>{item.quantity}</Text>
-                    <TouchableOpacity onPress={() => increaseQty(item.id)}>
-                      <Icon name="plus" type="feather" />
-                    </TouchableOpacity>
-                  </View>
+            <View style={styles.info}>
+              <Text style={styles.name}>{item.name}</Text>
+              <Text style={styles.price}>R {item.price}</Text>
+
+              <View style={styles.rowBetween}>
+                <View style={styles.qtyRow}>
+                  <TouchableOpacity onPress={() => decreaseQty(item.id)}>
+                    <Icon name="minus-circle" type="feather" />
+                  </TouchableOpacity>
+
+                  <Text style={styles.qty}>{item.quantity}</Text>
+
+                  <TouchableOpacity onPress={() => increaseQty(item.id)}>
+                    <Icon name="plus-circle" type="feather" />
+                  </TouchableOpacity>
                 </View>
-                <TouchableOpacity onPress={() => removeItem(item.id)}>
-                  <Icon name="trash" type="feather" color="red" />
+
+                <TouchableOpacity onPress={() => confirmDelete(item.id)}>
+                  <Icon name="trash-2" type="feather" color="red" />
                 </TouchableOpacity>
               </View>
-            )}
-          />
+            </View>
+          </TouchableOpacity>
+        )}
+      />
 
-          <View style={styles.totalContainer}>
-            <Text style={styles.totalText}>Total: R {total}</Text>
-          </View>
-
-          <Button
-            title="Clear Cart"
-            buttonStyle={[styles.button, { backgroundColor: "red" }]}
-            onPress={clearCart}
-          />
-          <Button
-            title="Go to Checkout"
-            buttonStyle={styles.button}
-            onPress={goToCheckout}
-          />
-        </>
-      )}
+      <View style={styles.footer}>
+        <Text style={styles.total}>Total: R {getTotal()}</Text>
+        <Button
+          title="Checkout"
+          buttonStyle={styles.checkout}
+          onPress={() => router.push("/checkout")}
+        />
+      </View>
     </View>
   );
 }
@@ -157,65 +158,93 @@ export default function Cart() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
     backgroundColor: "#fff",
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 16,
-  },
-  empty: {
-    textAlign: "center",
-    marginTop: 50,
-    fontSize: 16,
-    color: "#888",
-  },
+
   item: {
     flexDirection: "row",
+    padding: 14,
+    borderBottomWidth: 1,
+    borderColor: "#eee",
     alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: 0.5,
-    borderColor: "#ccc",
   },
+
   image: {
-    width: 60,
-    height: 60,
-    borderRadius: 6,
+    width: 80,
+    height: 80,
+    borderRadius: 10,
   },
+
   info: {
     flex: 1,
     marginLeft: 12,
   },
+
   name: {
     fontSize: 16,
-    fontWeight: "500",
+    fontWeight: "600",
   },
+
   price: {
     fontSize: 14,
     color: "#555",
+    marginVertical: 4,
   },
-  qtyContainer: {
+
+  qtyRow: {
     flexDirection: "row",
     alignItems: "center",
     marginTop: 6,
   },
+  rowBetween: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
   qty: {
-    marginHorizontal: 8,
+    marginHorizontal: 10,
     fontSize: 16,
   },
-  totalContainer: {
-    marginVertical: 16,
-    alignItems: "flex-end",
+
+  footer: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderColor: "#eee",
   },
-  totalText: {
-    fontSize: 20,
+
+  total: {
+    fontSize: 18,
     fontWeight: "bold",
+    marginBottom: 10,
   },
-  button: {
-    marginVertical: 6,
-    backgroundColor: "#000",
-    borderRadius: 6,
-    paddingVertical: 12,
+
+  checkout: {
+    backgroundColor: APP_COLOR,
+    borderRadius: 8,
+  },
+
+  empty: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  emptyText: {
+    fontSize: 18,
+    marginTop: 12,
+    color: "#888",
   },
 });
+
+
+
+
+
+
+
+
+
+
+
+
