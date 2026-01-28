@@ -1,310 +1,14 @@
-// import {
-//   View,
-//   Text,
-//   StyleSheet,
-//   Image,
-//   Alert,
-//   ScrollView,
-//   TouchableOpacity,
-// } from "react-native";
-// import { Input, Button, Icon } from "react-native-elements";
-// import { useEffect, useState } from "react";
-// import * as ImagePicker from "expo-image-picker";
-// import {
-//   collection,
-//   addDoc,
-//   updateDoc,
-//   doc,
-//   getDocs,
-// } from "firebase/firestore";
-// import { db } from "../../services/firebase";
-// import { useLocalSearchParams } from "expo-router";
-// import { Picker } from "@react-native-picker/picker";
-
-// const APP_COLOR = "#000";
-
-// const CATEGORIES = [
-//   "Starters",
-//   "Burgers",
-//   "Mains",
-//   "Desserts",
-//   "Beverages",
-//   "Alcohols",
-// ];
-
-// type Food = {
-//   id: string;
-//   name: string;
-//   price: number;
-//   image: string;
-// };
-
-// export default function ManageFood() {
-//   const params = useLocalSearchParams<{ id?: string }>();
-
-//   const [editingId, setEditingId] = useState<string | null>(null);
-
-//   const [name, setName] = useState("");
-//   const [description, setDescription] = useState("");
-//   const [price, setPrice] = useState("");
-//   const [image, setImage] = useState<string | null>(null);
-//   const [category, setCategory] = useState(CATEGORIES[0]);
-
-//   // 🔥 Add-ons via existing foods
-//   const [allFoods, setAllFoods] = useState<Food[]>([]);
-//   const [selectedAddonId, setSelectedAddonId] = useState<string | null>(null);
-//   const [addons, setAddons] = useState<string[]>([]);
-
-//   // 🧅 Removables
-//   const [removableInput, setRemovableInput] = useState("");
-//   const [removables, setRemovables] = useState<string[]>([]);
-
-//   useEffect(() => {
-//     loadFoods();
-//   }, []);
-
-//   const loadFoods = async () => {
-//     const snap = await getDocs(collection(db, "foods"));
-//     const list: Food[] = snap.docs.map((d) => ({
-//       id: d.id,
-//       ...(d.data() as Omit<Food, "id">),
-//     }));
-//     setAllFoods(list);
-//   };
-
-//   const pickImage = async () => {
-//     const result = await ImagePicker.launchImageLibraryAsync({
-//       base64: true,
-//       quality: 0.6,
-//     });
-
-//     if (!result.canceled && result.assets[0].base64) {
-//       setImage(`data:image/jpeg;base64,${result.assets[0].base64}`);
-//     }
-//   };
-
-//   const addAddon = () => {
-//     if (!selectedAddonId || addons.includes(selectedAddonId)) return;
-//     setAddons([...addons, selectedAddonId]);
-//     setSelectedAddonId(null);
-//   };
-
-//   const addRemovable = () => {
-//     if (!removableInput) return;
-//     setRemovables([...removables, removableInput]);
-//     setRemovableInput("");
-//   };
-
-//   const saveFood = async () => {
-//     if (!name || !description || !price || !image) {
-//       Alert.alert("Error", "Name, description, price and image are required");
-//       return;
-//     }
-
-//     const payload = {
-//       name,
-//       description,
-//       price: Number(price),
-//       image,
-//       category,
-//       addons,
-//       removables,
-//     };
-
-//     try {
-//       if (editingId) {
-//         await updateDoc(doc(db, "foods", editingId), payload);
-//         Alert.alert("Updated", "Food updated successfully");
-//       } else {
-//         await addDoc(collection(db, "foods"), payload);
-//         Alert.alert("Success", "Food added successfully");
-//       }
-
-//       resetForm();
-//     } catch (err: any) {
-//       Alert.alert("Error", err.message);
-//     }
-//   };
-
-//   const resetForm = () => {
-//     setName("");
-//     setDescription("");
-//     setPrice("");
-//     setImage(null);
-//     setCategory(CATEGORIES[0]);
-//     setAddons([]);
-//     setRemovables([]);
-//     setEditingId(null);
-//   };
-
-//   return (
-//     <ScrollView style={styles.container}>
-//       <Text style={styles.title}>Manage Food</Text>
-
-//       <Input label="Name" value={name} onChangeText={setName} />
-//       <Input
-//         label="Description"
-//         value={description}
-//         onChangeText={setDescription}
-//       />
-//       <Input
-//         label="Base Price"
-//         value={price}
-//         onChangeText={setPrice}
-//         keyboardType="numeric"
-//       />
-
-//       <Text style={styles.label}>Category</Text>
-//       <View style={styles.pickerBox}>
-//         <Picker selectedValue={category} onValueChange={setCategory}>
-//           {CATEGORIES.map((c) => (
-//             <Picker.Item key={c} label={c} value={c} />
-//           ))}
-//         </Picker>
-//       </View>
-
-//       <Button
-//         title="Pick Image"
-//         onPress={pickImage}
-//         buttonStyle={styles.button}
-//       />
-//       {image && <Image source={{ uri: image }} style={styles.preview} />}
-
-//       {/* ADD-ONS */}
-//       <Text style={styles.section}>Add-ons (Existing Foods)</Text>
-
-//       <View style={styles.pickerBox}>
-//         <Picker
-//           selectedValue={selectedAddonId}
-//           onValueChange={setSelectedAddonId}
-//         >
-//           <Picker.Item label="Select food to add as add-on" value={null} />
-//           {allFoods.map((f) => (
-//             <Picker.Item
-//               key={f.id}
-//               label={`${f.name} (R ${f.price})`}
-//               value={f.id}
-//             />
-//           ))}
-//         </Picker>
-//       </View>
-
-//       <Button title="Add as Add-on" onPress={addAddon} />
-
-//       {addons.map((id) => {
-//         const food = allFoods.find((f) => f.id === id);
-//         if (!food) return null;
-
-//         return (
-//           <View key={id} style={styles.addonCard}>
-//             <Image source={{ uri: food.image }} style={styles.addonImg} />
-//             <Text style={styles.addonText}>
-//               {food.name} – R {food.price}
-//             </Text>
-//           </View>
-//         );
-//       })}
-
-//       {/* REMOVABLES */}
-//       <Text style={styles.section}>Removable Ingredients</Text>
-
-//       <Input
-//         placeholder="e.g. Lettuce, Onion"
-//         value={removableInput}
-//         onChangeText={setRemovableInput}
-//       />
-//       <Button title="Add Ingredient" onPress={addRemovable} />
-
-//       {removables.map((r, i) => (
-//         <Text key={i} style={styles.removable}>
-//           • {r}
-//         </Text>
-//       ))}
-
-//       <Button
-//         title="Save Food"
-//         onPress={saveFood}
-//         buttonStyle={styles.button}
-//       />
-//     </ScrollView>
-//   );
-// }
-
-// const styles = StyleSheet.create({
-//   container: { flex: 1, padding: 16, backgroundColor: "#F9F9F9" },
-//   title: {
-//     fontSize: 24,
-//     fontWeight: "bold",
-//     textAlign: "center",
-//     marginBottom: 16,
-//   },
-//   label: { marginLeft: 10, fontWeight: "600" },
-//   pickerBox: {
-//     borderWidth: 1,
-//     borderColor: "#ddd",
-//     borderRadius: 8,
-//     marginBottom: 16,
-//   },
-//   button: { backgroundColor: APP_COLOR, marginVertical: 10 },
-//   preview: { width: 120, height: 120, alignSelf: "center", borderRadius: 8 },
-//   section: { marginTop: 24, fontSize: 18, fontWeight: "bold" },
-//   addonCard: {
-//     flexDirection: "row",
-//     alignItems: "center",
-//     backgroundColor: "#fff",
-//     padding: 10,
-//     borderRadius: 8,
-//     marginTop: 8,
-//   },
-//   addonImg: { width: 40, height: 40, borderRadius: 6, marginRight: 10 },
-//   addonText: { fontSize: 15, fontWeight: "500" },
-//   removable: { marginLeft: 10, marginTop: 4 },
-// });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-import { View, Text, StyleSheet, Image, Alert, ScrollView } from "react-native";
-import { Input, Button, CheckBox } from "react-native-elements";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  ScrollView,
+  TextInput,
+} from "react-native";
 import { useEffect, useState } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import {
   collection,
@@ -312,119 +16,194 @@ import {
   updateDoc,
   doc,
   getDocs,
-  getDoc,
 } from "firebase/firestore";
 import { db } from "../../services/firebase";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { Picker } from "@react-native-picker/picker";
+import { Ionicons } from "@expo/vector-icons";
 
-const APP_COLOR = "#000";
-
-const CATEGORIES = [
-  "Starters",
-  "Burgers",
-  "Mains",
-  "Desserts",
-  "Beverages",
-  "Alcohols",
-];
-
-type Food = {
+type FoodItem = {
   id: string;
   name: string;
   price: number;
   image: string;
 };
 
+type RemovableItem = {
+  name: string;
+};
+
 export default function ManageFood() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ id?: string }>();
+  const params = useLocalSearchParams();
 
-  // 🧠 Core state (NEVER conditional)
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const isEditMode = !!params.id;
+
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [image, setImage] = useState<string | null>(null);
-  const [category, setCategory] = useState(CATEGORIES[0]);
+  const [category, setCategory] = useState("");
 
-  // ➕ Add-ons
-  const [allFoods, setAllFoods] = useState<Food[]>([]);
-  const [addons, setAddons] = useState<string[]>([]);
+  const [addonsOpen, setAddonsOpen] = useState(false);
+  const [removableOpen, setRemovableOpen] = useState(false);
+  const [categoryOpen, setCategoryOpen] = useState(false);
 
-  // ➖ Removables
-  const [removableInput, setRemovableInput] = useState("");
-  const [removables, setRemovables] = useState<string[]>([]);
+  // Available foods to choose as add-ons
+  const [availableFoods, setAvailableFoods] = useState<FoodItem[]>([]);
 
-  // 🔄 Load foods for add-ons
+  // Selected add-ons (food items)
+  const [selectedAddons, setSelectedAddons] = useState<FoodItem[]>([]);
+
+  // Removable items
+  const [newRemovableName, setNewRemovableName] = useState("");
+  const [showNewRemovableInput, setShowNewRemovableInput] = useState(false);
+  const [availableRemovables, setAvailableRemovables] = useState<
+    RemovableItem[]
+  >([]);
+  const [selectedRemovables, setSelectedRemovables] = useState<RemovableItem[]>(
+    [],
+  );
+
+  const CATEGORIES = [
+    "Burgers",
+    "Pizza",
+    "Pasta",
+    "Salads",
+    "Desserts",
+    "Drinks",
+    "Appetizers",
+    "Main Course",
+  ];
+
+  /* Load all existing foods from Firebase */
   useEffect(() => {
-    const loadFoods = async () => {
-      const snap = await getDocs(collection(db, "foods"));
-      const list = snap.docs.map((d) => ({
-        id: d.id,
-        ...(d.data() as Omit<Food, "id">),
-      }));
-      setAllFoods(list);
-    };
-
-    loadFoods();
+    loadAvailableFoods();
+    loadRemovableItems();
   }, []);
 
-  // ✏️ Load food when editing (SAFE)
+  /* Prefill on edit - FIXED: Using separate useEffect */
   useEffect(() => {
-    if (!params.id) return;
+    if (isEditMode && params) {
+      // Set basic fields
+      if (params.name) setName(String(params.name));
+      if (params.description) setDescription(String(params.description));
+      if (params.price) setPrice(String(params.price));
+      if (params.image) setImage(String(params.image));
+      if (params.category) setCategory(String(params.category));
 
-    const loadFoodForEdit = async () => {
-      const ref = doc(db, "foods", params.id as string);
-      const snap = await getDoc(ref);
+      // Parse addons if they exist
+      if (params.addons) {
+        try {
+          const parsedAddons = JSON.parse(String(params.addons));
+          setSelectedAddons(parsedAddons);
+        } catch (e) {
+          console.log("Error parsing addons:", e);
+          setSelectedAddons([]);
+        }
+      }
 
-      if (!snap.exists()) return;
+      // Parse removables if they exist
+      if (params.removables) {
+        try {
+          const parsedRemovables = JSON.parse(String(params.removables));
+          setSelectedRemovables(parsedRemovables);
+        } catch (e) {
+          console.log("Error parsing removables:", e);
+          setSelectedRemovables([]);
+        }
+      }
+    }
+  }, [isEditMode, params.id]); // Only depend on isEditMode and id
 
-      const data = snap.data();
-
-      setEditingId(params.id as string);
-      setName(data.name ?? "");
-      setDescription(data.description ?? "");
-      setPrice(String(data.price ?? ""));
-      setImage(data.image ?? null);
-      setCategory(data.category ?? CATEGORIES[0]);
-      setAddons(data.addons ?? []);
-      setRemovables(data.removables ?? []);
-    };
-
-    loadFoodForEdit();
-  }, [params.id]);
-
-  // 🖼 Pick image (base64 for now)
-  const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      base64: true,
-      quality: 0.6,
-    });
-
-    if (!result.canceled && result.assets[0].base64) {
-      setImage(`data:image/jpeg;base64,${result.assets[0].base64}`);
+  const loadAvailableFoods = async () => {
+    try {
+      const snap = await getDocs(collection(db, "foods"));
+      const foodsList = snap.docs.map((d) => ({
+        id: d.id,
+        name: d.data().name,
+        price: d.data().price,
+        image: d.data().image,
+      }));
+      setAvailableFoods(foodsList);
+    } catch (error) {
+      console.error("Error loading foods:", error);
     }
   };
 
-  // ➕ Toggle add-on checkbox
-  const toggleAddon = (id: string) => {
-    setAddons((prev) =>
-      prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id],
-    );
+  const loadRemovableItems = async () => {
+    try {
+      const snap = await getDocs(collection(db, "foods"));
+      const removablesSet = new Set<string>();
+
+      snap.docs.forEach((doc) => {
+        const data = doc.data();
+        if (data.removables && Array.isArray(data.removables)) {
+          data.removables.forEach((removable: RemovableItem) => {
+            if (removable.name) removablesSet.add(removable.name);
+          });
+        }
+      });
+
+      setAvailableRemovables(
+        Array.from(removablesSet).map((name) => ({ name })),
+      );
+    } catch (error) {
+      console.error("Error loading removables:", error);
+    }
   };
 
-  // ➖ Add removable ingredient
-  const addRemovable = () => {
-    if (!removableInput.trim()) return;
-    setRemovables([...removables, removableInput.trim()]);
-    setRemovableInput("");
+  const toggleAddon = (food: FoodItem) => {
+    const isSelected = selectedAddons.some((item) => item.id === food.id);
+
+    if (isSelected) {
+      setSelectedAddons(selectedAddons.filter((item) => item.id !== food.id));
+    } else {
+      setSelectedAddons([...selectedAddons, food]);
+    }
   };
 
-  // 💾 Save food
-  const saveFood = async () => {
+  const toggleRemovable = (item: RemovableItem) => {
+    const isSelected = selectedRemovables.some((i) => i.name === item.name);
+
+    if (isSelected) {
+      setSelectedRemovables(
+        selectedRemovables.filter((i) => i.name !== item.name),
+      );
+    } else {
+      setSelectedRemovables([...selectedRemovables, item]);
+    }
+  };
+
+  const addNewRemovable = () => {
+    if (newRemovableName.trim()) {
+      const newRemovable = { name: newRemovableName.trim() };
+
+      if (!availableRemovables.some((r) => r.name === newRemovable.name)) {
+        setAvailableRemovables([...availableRemovables, newRemovable]);
+      }
+
+      if (!selectedRemovables.some((r) => r.name === newRemovable.name)) {
+        setSelectedRemovables([...selectedRemovables, newRemovable]);
+      }
+
+      setNewRemovableName("");
+      setShowNewRemovableInput(false);
+    }
+  };
+
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.7,
+    });
+
+    if (!result.canceled) {
+      setImage(result.assets[0].uri);
+    }
+  };
+
+  const handleSave = async () => {
     if (!name || !description || !price || !image) {
-      Alert.alert("Error", "All fields are required");
+      alert("Please fill all required fields");
       return;
     }
 
@@ -434,119 +213,532 @@ export default function ManageFood() {
       price: Number(price),
       image,
       category,
-      addons,
-      removables,
+      addons: selectedAddons,
+      removables: selectedRemovables,
     };
 
     try {
-      if (editingId) {
-        await updateDoc(doc(db, "foods", editingId), payload);
-        Alert.alert("Updated", "Food updated successfully");
+      if (isEditMode && params.id) {
+        await updateDoc(doc(db, "foods", String(params.id)), payload);
       } else {
         await addDoc(collection(db, "foods"), payload);
-        Alert.alert("Success", "Food added successfully");
       }
-
       router.back();
-    } catch (err: any) {
-      Alert.alert("Error", err.message);
+    } catch (error) {
+      console.error("Error saving:", error);
+      alert("Error saving food item");
     }
   };
 
+  const renderFoodCheckbox = (food: FoodItem) => {
+    const isSelected = selectedAddons.some((item) => item.id === food.id);
+
+    // Don't show current food in add-ons list when editing
+    if (isEditMode && params.id === food.id) {
+      return null;
+    }
+
+    return (
+      <TouchableOpacity
+        key={food.id}
+        style={styles.foodRow}
+        onPress={() => toggleAddon(food)}
+        activeOpacity={0.7}
+      >
+        <View style={[styles.checkbox, isSelected && styles.checked]}>
+          {isSelected && <Ionicons name="checkmark" size={14} color="#fff" />}
+        </View>
+        <Image source={{ uri: food.image }} style={styles.foodThumbnail} />
+        <View style={styles.foodInfo}>
+          <Text style={styles.foodName}>{food.name}</Text>
+          <Text style={styles.foodPrice}>R {food.price}</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderRemovableCheckbox = (item: RemovableItem) => {
+    const isSelected = selectedRemovables.some((i) => i.name === item.name);
+
+    return (
+      <TouchableOpacity
+        key={item.name}
+        style={styles.row}
+        onPress={() => toggleRemovable(item)}
+        activeOpacity={0.7}
+      >
+        <View style={[styles.checkbox, isSelected && styles.checked]}>
+          {isSelected && <Ionicons name="checkmark" size={14} color="#fff" />}
+        </View>
+        <Text>{item.name}</Text>
+      </TouchableOpacity>
+    );
+  };
+
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>{editingId ? "Update Food" : "Add Food"}</Text>
+    <ScrollView
+      contentContainerStyle={styles.container}
+      keyboardShouldPersistTaps="handled"
+    >
+      <Text style={styles.title}>
+        {isEditMode ? "Update Food" : "Add Food"}
+      </Text>
 
-      <Input label="Name" value={name} onChangeText={setName} />
-      <Input
-        label="Description"
-        value={description}
-        onChangeText={setDescription}
-      />
-      <Input
-        label="Base Price"
-        value={price}
-        onChangeText={setPrice}
-        keyboardType="numeric"
-      />
+      {/* Image */}
+      <TouchableOpacity
+        style={styles.imageBox}
+        onPress={pickImage}
+        activeOpacity={0.8}
+      >
+        {image ? (
+          <Image source={{ uri: image }} style={styles.image} />
+        ) : (
+          <Text>Select Image</Text>
+        )}
+      </TouchableOpacity>
 
-      <Text style={styles.label}>Category</Text>
-      <View style={styles.pickerBox}>
-        <Picker selectedValue={category} onValueChange={setCategory}>
-          {CATEGORIES.map((c) => (
-            <Picker.Item key={c} label={c} value={c} />
-          ))}
-        </Picker>
+      {/* Name Input */}
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>Name *</Text>
+        <TextInput
+          style={styles.input}
+          value={name}
+          onChangeText={setName}
+          placeholder="Enter food name"
+          placeholderTextColor="#999"
+          editable={true}
+        />
       </View>
 
-      <Button title="Pick Image" onPress={pickImage} />
-      {image && <Image source={{ uri: image }} style={styles.preview} />}
+      {/* Description Input */}
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>Description / Ingredients *</Text>
+        <TextInput
+          style={[styles.input, styles.textArea]}
+          value={description}
+          onChangeText={setDescription}
+          placeholder="Enter description"
+          placeholderTextColor="#999"
+          multiline
+          numberOfLines={4}
+          textAlignVertical="top"
+          editable={true}
+        />
+      </View>
 
-      {/* ADD-ONS */}
-      <Text style={styles.section}>Add-ons</Text>
-      {allFoods
-        .filter((f) => f.id !== editingId)
-        .map((food) => (
-          <CheckBox
-            key={food.id}
-            title={`${food.name} (R ${food.price})`}
-            checked={addons.includes(food.id)}
-            onPress={() => toggleAddon(food.id)}
-          />
-        ))}
+      {/* Price Input */}
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>Price (R) *</Text>
+        <TextInput
+          style={styles.input}
+          value={price}
+          onChangeText={setPrice}
+          placeholder="Enter price"
+          placeholderTextColor="#999"
+          keyboardType="numeric"
+          editable={true}
+        />
+      </View>
 
-      {/* REMOVABLES */}
-      <Text style={styles.section}>Removable Ingredients</Text>
-      <Input
-        placeholder="e.g. Lettuce"
-        value={removableInput}
-        onChangeText={setRemovableInput}
-      />
-      <Button title="Add Ingredient" onPress={addRemovable} />
-
-      {removables.map((r, i) => (
-        <Text key={i} style={styles.removable}>
-          • {r}
+      {/* Category Dropdown */}
+      <TouchableOpacity
+        style={styles.dropdown}
+        onPress={() => setCategoryOpen(!categoryOpen)}
+        activeOpacity={0.7}
+      >
+        <Text
+          style={
+            category ? styles.dropdownSelected : styles.dropdownPlaceholder
+          }
+        >
+          {category || "Select Category"}
         </Text>
-      ))}
+        <Ionicons
+          name={categoryOpen ? "chevron-up" : "chevron-down"}
+          size={20}
+          color="#000"
+        />
+      </TouchableOpacity>
+      {categoryOpen && (
+        <View style={styles.dropdownContent}>
+          {CATEGORIES.map((cat) => (
+            <TouchableOpacity
+              key={cat}
+              style={styles.row}
+              onPress={() => {
+                setCategory(cat);
+                setCategoryOpen(false);
+              }}
+              activeOpacity={0.7}
+            >
+              <View
+                style={[styles.checkbox, category === cat && styles.checked]}
+              >
+                {category === cat && (
+                  <Ionicons name="checkmark" size={14} color="#fff" />
+                )}
+              </View>
+              <Text>{cat}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
 
-      <Button
-        title={editingId ? "Update Food" : "Save Food"}
-        onPress={saveFood}
-        buttonStyle={styles.saveBtn}
-      />
+      {/* Add-ons Dropdown - Shows existing food items with images */}
+      <TouchableOpacity
+        style={styles.dropdown}
+        onPress={() => setAddonsOpen(!addonsOpen)}
+        activeOpacity={0.7}
+      >
+        <Text>
+          Add-ons - Choose Food Items ({selectedAddons.length} selected)
+        </Text>
+        <Ionicons
+          name={addonsOpen ? "chevron-up" : "chevron-down"}
+          size={20}
+          color="#000"
+        />
+      </TouchableOpacity>
+      {addonsOpen && (
+        <View style={styles.dropdownContent}>
+          {availableFoods.length === 0 ? (
+            <Text style={styles.emptyText}>
+              No food items available yet. Add some food first!
+            </Text>
+          ) : (
+            availableFoods.map((food) => renderFoodCheckbox(food))
+          )}
+        </View>
+      )}
+
+      {/* Removables Dropdown */}
+      <TouchableOpacity
+        style={styles.dropdown}
+        onPress={() => setRemovableOpen(!removableOpen)}
+        activeOpacity={0.7}
+      >
+        <Text>
+          Removable Ingredients ({selectedRemovables.length} selected)
+        </Text>
+        <Ionicons
+          name={removableOpen ? "chevron-up" : "chevron-down"}
+          size={20}
+          color="#000"
+        />
+      </TouchableOpacity>
+      {removableOpen && (
+        <View style={styles.dropdownContent}>
+          {availableRemovables.map((r) => renderRemovableCheckbox(r))}
+
+          {/* Add new removable button */}
+          {!showNewRemovableInput ? (
+            <TouchableOpacity
+              style={styles.addNewBtn}
+              onPress={() => setShowNewRemovableInput(true)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="add-circle-outline" size={20} color="#000" />
+              <Text style={styles.addNewText}>Create New Removable</Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.newItemContainer}>
+              <TextInput
+                style={styles.newItemInput}
+                placeholder="Enter removable ingredient name"
+                placeholderTextColor="#999"
+                value={newRemovableName}
+                onChangeText={setNewRemovableName}
+                editable={true}
+              />
+              <TouchableOpacity
+                style={styles.saveNewBtn}
+                onPress={addNewRemovable}
+              >
+                <Text style={styles.saveNewText}>Add</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.cancelNewBtn}
+                onPress={() => {
+                  setShowNewRemovableInput(false);
+                  setNewRemovableName("");
+                }}
+              >
+                <Text>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      )}
+
+      <TouchableOpacity
+        style={styles.saveBtn}
+        onPress={handleSave}
+        activeOpacity={0.8}
+      >
+        <Text style={styles.saveText}>
+          {isEditMode ? "Update Food" : "Add Food"}
+        </Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: "#F9F9F9" },
+  container: {
+    padding: 16,
+    backgroundColor: "#fff",
+    paddingBottom: 40,
+  },
   title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    textAlign: "center",
+    fontSize: 22,
+    fontWeight: "700",
+    marginBottom: 16,
+    color: "#000",
+  },
+
+  imageBox: {
+    height: 160,
+    borderWidth: 1,
+    borderColor: "#000",
+    borderRadius: 8,
+    marginBottom: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
+    backgroundColor: "#f5f5f5",
+  },
+  image: {
+    width: "100%",
+    height: "100%",
+  },
+
+  inputContainer: {
     marginBottom: 16,
   },
-  label: { marginLeft: 10, fontWeight: "600", marginBottom: 4 },
-  pickerBox: {
+  label: {
+    fontSize: 14,
+    fontWeight: "600",
+    marginBottom: 6,
+    color: "#000",
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#000",
+    borderRadius: 6,
+    padding: 12,
+    fontSize: 15,
+    backgroundColor: "#fff",
+    color: "#000",
+  },
+  textArea: {
+    height: 100,
+    paddingTop: 12,
+  },
+
+  dropdown: {
+    borderWidth: 1,
+    borderColor: "#000",
+    padding: 12,
+    borderRadius: 6,
+    marginTop: 12,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#fff",
+  },
+
+  dropdownPlaceholder: {
+    color: "#999",
+  },
+
+  dropdownSelected: {
+    color: "#000",
+  },
+
+  dropdownContent: {
     borderWidth: 1,
     borderColor: "#ddd",
-    borderRadius: 8,
-    marginBottom: 16,
+    borderTopWidth: 0,
+    borderRadius: 6,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+    padding: 8,
+    backgroundColor: "#f9f9f9",
   },
-  preview: {
-    width: 120,
-    height: 120,
-    alignSelf: "center",
-    borderRadius: 8,
-    marginVertical: 10,
+
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+    paddingLeft: 12,
+    paddingVertical: 6,
   },
-  section: {
-    marginTop: 24,
-    fontSize: 18,
-    fontWeight: "bold",
+
+  foodRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+    paddingLeft: 12,
+    paddingVertical: 8,
+    paddingRight: 12,
+  },
+
+  foodThumbnail: {
+    width: 40,
+    height: 40,
+    borderRadius: 6,
+    marginRight: 12,
+    backgroundColor: "#e0e0e0",
+  },
+
+  foodInfo: {
+    flex: 1,
+  },
+
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderWidth: 2,
+    borderColor: "#000",
+    marginRight: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 3,
+    backgroundColor: "#fff",
+  },
+  checked: {
+    backgroundColor: "#000",
+  },
+
+  foodName: {
+    fontSize: 15,
+    fontWeight: "500",
+    color: "#000",
+  },
+
+  foodPrice: {
+    fontSize: 13,
+    color: "#666",
+    fontWeight: "600",
+    marginTop: 2,
+  },
+
+  emptyText: {
+    textAlign: "center",
+    color: "#999",
+    padding: 16,
+    fontStyle: "italic",
+  },
+
+  addNewBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 12,
+    paddingLeft: 12,
+    gap: 8,
+  },
+  addNewText: {
+    color: "#000",
+    fontWeight: "600",
+  },
+
+  newItemContainer: {
+    marginTop: 12,
+    paddingLeft: 12,
+    paddingRight: 12,
+  },
+  newItemInput: {
+    borderWidth: 1,
+    borderColor: "#000",
+    borderRadius: 6,
+    padding: 10,
+    marginBottom: 8,
+    backgroundColor: "#fff",
+    color: "#000",
+  },
+  saveNewBtn: {
+    backgroundColor: "#000",
+    padding: 10,
+    borderRadius: 6,
+    alignItems: "center",
     marginBottom: 8,
   },
-  removable: { marginLeft: 10, marginTop: 4 },
-  saveBtn: { backgroundColor: APP_COLOR, marginVertical: 20 },
+  saveNewText: {
+    color: "#fff",
+    fontWeight: "600",
+  },
+  cancelNewBtn: {
+    padding: 10,
+    alignItems: "center",
+  },
+
+  saveBtn: {
+    backgroundColor: "#000",
+    padding: 14,
+    borderRadius: 8,
+    marginTop: 24,
+    alignItems: "center",
+  },
+  saveText: {
+    color: "#fff",
+    fontWeight: "700",
+  },
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

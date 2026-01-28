@@ -17,8 +17,8 @@ type OrderItem = {
   name: string;
   price: number;
   quantity: number;
-  addons?: string[];
-  removables?: string[];
+  addons?: any[];
+  removables?: any[];
 };
 
 type Order = {
@@ -68,61 +68,125 @@ export default function AdminOrders() {
     }
   };
 
-  const renderItem = ({ item }: { item: Order }) => (
+  const renderItem = ({ item, index }: { item: Order; index: number }) => (
     <View style={styles.card}>
-      <Text style={styles.orderId}>Order #{item.id.slice(0, 6)}</Text>
+      {/* Order Number Header */}
+      <View style={styles.orderHeader}>
+        <Text style={styles.orderNumber}>Order #{index + 1}</Text>
+        <View style={[styles.statusBadge, getStatusColor(item.status)]}>
+          <Text style={styles.statusText}>{item.status}</Text>
+        </View>
+      </View>
 
-      <Text style={styles.text}>
-        👤 {item.userName} | 📞 {item.phone}
-      </Text>
-      <Text style={styles.text}>📍 {item.address}</Text>
+      {/* Customer Info */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Customer Details</Text>
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Name:</Text>
+          <Text style={styles.value}>{item.userName}</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Phone:</Text>
+          <Text style={styles.value}>{item.phone}</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Address:</Text>
+          <Text style={styles.value}>{item.address}</Text>
+        </View>
+      </View>
 
-      <View style={styles.itemsBox}>
-        {item.items.map((i, index) => (
-          <View key={index} style={styles.itemRow}>
-            <Text style={styles.itemName}>
-              {i.quantity} × {i.name}
+      {/* Order Items */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Items</Text>
+        {item.items.map((i, idx) => (
+          <View key={idx} style={styles.itemRow}>
+            <View style={styles.itemLeft}>
+              <Text style={styles.itemQuantity}>{i.quantity}x</Text>
+              <View style={styles.itemDetails}>
+                <Text style={styles.itemName}>{i.name}</Text>
+
+                {/* Add-ons */}
+                {i.addons && i.addons.length > 0 && (
+                  <Text style={styles.addon}>
+                    + {i.addons.map((a) => a.name).join(", ")}
+                  </Text>
+                )}
+
+                {/* Removables */}
+                {i.removables && i.removables.length > 0 && (
+                  <Text style={styles.removable}>
+                    - No {i.removables.map((r) => r.name).join(", ")}
+                  </Text>
+                )}
+              </View>
+            </View>
+            <Text style={styles.itemPrice}>
+              R {(i.price * i.quantity).toFixed(2)}
             </Text>
-            <Text>R {i.price * i.quantity}</Text>
-
-            {i.addons && i.addons.length > 0 && (
-              <Text style={styles.sub}>➕ Add-ons: {i.addons.join(", ")}</Text>
-            )}
-
-            {i.removables && i.removables.length > 0 && (
-              <Text style={styles.sub}>➖ No: {i.removables.join(", ")}</Text>
-            )}
           </View>
         ))}
       </View>
 
-      <Text style={styles.total}>Total: R {item.total}</Text>
+      {/* Total */}
+      <View style={styles.totalRow}>
+        <Text style={styles.totalLabel}>Total</Text>
+        <Text style={styles.totalAmount}>R {item.total.toFixed(2)}</Text>
+      </View>
 
+      {/* Status Picker */}
       <View style={styles.statusBox}>
-        <Text style={styles.statusLabel}>Status</Text>
-        <Picker
-          selectedValue={item.status}
-          onValueChange={(value) => updateStatus(item.id, value)}
-        >
-          {STATUSES.map((s) => (
-            <Picker.Item key={s} label={s} value={s} />
-          ))}
-        </Picker>
+        <Text style={styles.statusPickerLabel}>Update Status</Text>
+        <View style={styles.pickerWrapper}>
+          <Picker
+            selectedValue={item.status}
+            onValueChange={(value) => updateStatus(item.id, value)}
+            style={styles.picker}
+          >
+            {STATUSES.map((s) => (
+              <Picker.Item key={s} label={s} value={s} />
+            ))}
+          </Picker>
+        </View>
       </View>
     </View>
   );
 
+  // Helper function to get status color
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "Pending":
+        return styles.statusPending;
+      case "Preparing":
+        return styles.statusPreparing;
+      case "Out for delivery":
+        return styles.statusDelivery;
+      case "Completed":
+        return styles.statusCompleted;
+      default:
+        return styles.statusPending;
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.center}>
-        <Text>Loading orders...</Text>
+        <Text style={styles.loadingText}>Loading orders...</Text>
+      </View>
+    );
+  }
+
+  if (orders.length === 0) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.emptyText}>No orders yet</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Orders</Text>
+      <Text style={styles.title}>Orders Management</Text>
+      <Text style={styles.subtitle}>{orders.length} Total Orders</Text>
 
       <FlatList
         data={orders}
@@ -138,64 +202,192 @@ export default function AdminOrders() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F9F9F9",
+    backgroundColor: "#F5F5F5",
     padding: 16,
   },
   center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "#F5F5F5",
   },
   title: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: "bold",
     textAlign: "center",
-    marginBottom: 12,
+    marginBottom: 4,
+    color: "#000",
+  },
+  subtitle: {
+    fontSize: 14,
+    textAlign: "center",
+    color: "#666",
+    marginBottom: 16,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: "#666",
+  },
+  emptyText: {
+    fontSize: 16,
+    color: "#999",
   },
   card: {
     backgroundColor: "#fff",
-    padding: 14,
-    borderRadius: 10,
-    marginBottom: 12,
-    elevation: 2,
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  orderId: {
+  orderHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E0E0E0",
+  },
+  orderNumber: {
+    fontSize: 18,
     fontWeight: "bold",
+    color: "#000",
+  },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#fff",
+  },
+  statusPending: {
+    backgroundColor: "#FF9800",
+  },
+  statusPreparing: {
+    backgroundColor: "#2196F3",
+  },
+  statusDelivery: {
+    backgroundColor: "#9C27B0",
+  },
+  statusCompleted: {
+    backgroundColor: "#4CAF50",
+  },
+  section: {
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#000",
+    marginBottom: 8,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  infoRow: {
+    flexDirection: "row",
     marginBottom: 6,
   },
-  text: {
+  label: {
     fontSize: 14,
-    marginBottom: 2,
+    color: "#666",
+    width: 80,
+    fontWeight: "500",
   },
-  itemsBox: {
-    marginTop: 10,
-    marginBottom: 10,
+  value: {
+    fontSize: 14,
+    color: "#000",
+    flex: 1,
   },
   itemRow: {
-    marginBottom: 6,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F0F0",
+  },
+  itemLeft: {
+    flexDirection: "row",
+    flex: 1,
+    marginRight: 12,
+  },
+  itemQuantity: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#000",
+    marginRight: 8,
+    minWidth: 30,
+  },
+  itemDetails: {
+    flex: 1,
   },
   itemName: {
+    fontSize: 14,
     fontWeight: "600",
+    color: "#000",
+    marginBottom: 2,
   },
-  sub: {
+  addon: {
     fontSize: 12,
-    color: "#666",
-    marginLeft: 6,
+    color: "#4CAF50",
+    marginTop: 2,
   },
-  total: {
+  removable: {
+    fontSize: 12,
+    color: "#F44336",
+    marginTop: 2,
+  },
+  itemPrice: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#000",
+  },
+  totalRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingTop: 12,
+    marginTop: 8,
+    borderTopWidth: 2,
+    borderTopColor: "#000",
+  },
+  totalLabel: {
+    fontSize: 16,
     fontWeight: "bold",
-    marginTop: 6,
+    color: "#000",
+  },
+  totalAmount: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#000",
   },
   statusBox: {
-    marginTop: 10,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: "#E0E0E0",
   },
-  statusLabel: {
-    fontSize: 12,
+  statusPickerLabel: {
+    fontSize: 14,
     fontWeight: "600",
-    marginLeft: 10,
-    marginTop: 6,
+    color: "#000",
+    marginBottom: 8,
+  },
+  pickerWrapper: {
+    borderWidth: 1,
+    borderColor: "#000",
+    borderRadius: 8,
+    overflow: "hidden",
+    backgroundColor: "#fff",
+  },
+  picker: {
+    height: 50,
   },
 });
