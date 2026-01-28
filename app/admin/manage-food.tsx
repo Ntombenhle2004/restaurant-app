@@ -302,18 +302,8 @@
 
 
 
-
-
-import {
-  View,
-  Text,
-  StyleSheet,
-  Image,
-  Alert,
-  ScrollView,
-  TouchableOpacity,
-} from "react-native";
-import { Input, Button, Icon } from "react-native-elements";
+import { View, Text, StyleSheet, Image, Alert, ScrollView } from "react-native";
+import { Input, Button, CheckBox } from "react-native-elements";
 import { useEffect, useState } from "react";
 import * as ImagePicker from "expo-image-picker";
 import {
@@ -325,10 +315,8 @@ import {
   getDoc,
 } from "firebase/firestore";
 import { db } from "../../services/firebase";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { Picker } from "@react-native-picker/picker";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { useAdminGuard } from "../../hooks/useAdminGaurd";
 
 const APP_COLOR = "#000";
 
@@ -349,94 +337,91 @@ type Food = {
 };
 
 export default function ManageFood() {
-  const loading = useAdminGuard();
-  if (loading) return null;
-
+  const router = useRouter();
   const params = useLocalSearchParams<{ id?: string }>();
-  const storage = getStorage();
 
+  // 🧠 Core state (NEVER conditional)
   const [editingId, setEditingId] = useState<string | null>(null);
-
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [image, setImage] = useState<string | null>(null);
   const [category, setCategory] = useState(CATEGORIES[0]);
 
-  // Add-ons & removables
+  // ➕ Add-ons
   const [allFoods, setAllFoods] = useState<Food[]>([]);
   const [addons, setAddons] = useState<string[]>([]);
-  const [removables, setRemovables] = useState<string[]>([]);
+
+  // ➖ Removables
   const [removableInput, setRemovableInput] = useState("");
+  const [removables, setRemovables] = useState<string[]>([]);
 
-  /* ---------------- LOAD FOODS ---------------- */
-
+  // 🔄 Load foods for add-ons
   useEffect(() => {
+    const loadFoods = async () => {
+      const snap = await getDocs(collection(db, "foods"));
+      const list = snap.docs.map((d) => ({
+        id: d.id,
+        ...(d.data() as Omit<Food, "id">),
+      }));
+      setAllFoods(list);
+    };
+
     loadFoods();
   }, []);
 
-  const loadFoods = async () => {
-    const snap = await getDocs(collection(db, "foods"));
-    const list: Food[] = snap.docs.map((d) => ({
-      id: d.id,
-      ...(d.data() as Omit<Food, "id">),
-    }));
-    setAllFoods(list);
-  };
-
-  /* ---------------- LOAD FOOD FOR EDIT ---------------- */
-
+  // ✏️ Load food when editing (SAFE)
   useEffect(() => {
     if (!params.id) return;
 
-    const loadFood = async () => {
-      const snap = await getDoc(doc(db, "foods", params.id!));
+    const loadFoodForEdit = async () => {
+      const ref = doc(db, "foods", params.id as string);
+      const snap = await getDoc(ref);
+
       if (!snap.exists()) return;
 
       const data = snap.data();
-      setEditingId(params.id!);
-      setName(data.name);
-      setDescription(data.description);
-      setPrice(String(data.price));
-      setImage(data.image);
-      setCategory(data.category);
-      setAddons(data.addons || []);
-      setRemovables(data.removables || []);
+
+      setEditingId(params.id as string);
+      setName(data.name ?? "");
+      setDescription(data.description ?? "");
+      setPrice(String(data.price ?? ""));
+      setImage(data.image ?? null);
+      setCategory(data.category ?? CATEGORIES[0]);
+      setAddons(data.addons ?? []);
+      setRemovables(data.removables ?? []);
     };
 
-    loadFood();
+    loadFoodForEdit();
   }, [params.id]);
 
-  /* ---------------- IMAGE PICKER (FIREBASE STORAGE) ---------------- */
-
+  // 🖼 Pick image (base64 for now)
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      allowsEditing: true,
-      quality: 0.7,
+      base64: true,
+      quality: 0.6,
     });
 
-    if (result.canceled) return;
-
-    const response = await fetch(result.assets[0].uri);
-    const blob = await response.blob();
-
-    const imageRef = ref(storage, `foods/${Date.now()}.jpg`);
-    await uploadBytes(imageRef, blob);
-
-    const url = await getDownloadURL(imageRef);
-    setImage(url);
+    if (!result.canceled && result.assets[0].base64) {
+      setImage(`data:image/jpeg;base64,${result.assets[0].base64}`);
+    }
   };
 
-  /* ---------------- ADD REMOVABLE ---------------- */
+  // ➕ Toggle add-on checkbox
+  const toggleAddon = (id: string) => {
+    setAddons((prev) =>
+      prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id],
+    );
+  };
 
+  // ➖ Add removable ingredient
   const addRemovable = () => {
-    if (!removableInput) return;
-    setRemovables([...removables, removableInput]);
+    if (!removableInput.trim()) return;
+    setRemovables([...removables, removableInput.trim()]);
     setRemovableInput("");
   };
 
-  /* ---------------- SAVE / UPDATE ---------------- */
-
+  // 💾 Save food
   const saveFood = async () => {
     if (!name || !description || !price || !image) {
       Alert.alert("Error", "All fields are required");
@@ -462,24 +447,11 @@ export default function ManageFood() {
         Alert.alert("Success", "Food added successfully");
       }
 
-      resetForm();
+      router.back();
     } catch (err: any) {
       Alert.alert("Error", err.message);
     }
   };
-
-  const resetForm = () => {
-    setEditingId(null);
-    setName("");
-    setDescription("");
-    setPrice("");
-    setImage(null);
-    setCategory(CATEGORIES[0]);
-    setAddons([]);
-    setRemovables([]);
-  };
-
-  /* ---------------- UI ---------------- */
 
   return (
     <ScrollView style={styles.container}>
@@ -512,34 +484,19 @@ export default function ManageFood() {
 
       {/* ADD-ONS */}
       <Text style={styles.section}>Add-ons</Text>
-
       {allFoods
         .filter((f) => f.id !== editingId)
         .map((food) => (
-          <TouchableOpacity
+          <CheckBox
             key={food.id}
-            style={styles.checkboxRow}
-            onPress={() =>
-              setAddons((prev) =>
-                prev.includes(food.id)
-                  ? prev.filter((id) => id !== food.id)
-                  : [...prev, food.id],
-              )
-            }
-          >
-            <Icon
-              name={addons.includes(food.id) ? "check-square" : "square"}
-              type="feather"
-            />
-            <Text style={styles.checkboxText}>
-              {food.name} (R {food.price})
-            </Text>
-          </TouchableOpacity>
+            title={`${food.name} (R ${food.price})`}
+            checked={addons.includes(food.id)}
+            onPress={() => toggleAddon(food.id)}
+          />
         ))}
 
       {/* REMOVABLES */}
       <Text style={styles.section}>Removable Ingredients</Text>
-
       <Input
         placeholder="e.g. Lettuce"
         value={removableInput}
@@ -556,18 +513,21 @@ export default function ManageFood() {
       <Button
         title={editingId ? "Update Food" : "Save Food"}
         onPress={saveFood}
-        buttonStyle={styles.button}
+        buttonStyle={styles.saveBtn}
       />
     </ScrollView>
   );
 }
 
-/* ---------------- STYLES ---------------- */
-
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, backgroundColor: "#F9F9F9" },
-  title: { fontSize: 24, fontWeight: "bold", textAlign: "center" },
-  label: { marginLeft: 10, fontWeight: "600" },
+  title: {
+    fontSize: 24,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 16,
+  },
+  label: { marginLeft: 10, fontWeight: "600", marginBottom: 4 },
   pickerBox: {
     borderWidth: 1,
     borderColor: "#ddd",
@@ -575,19 +535,18 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   preview: {
-    width: 140,
-    height: 140,
+    width: 120,
+    height: 120,
     alignSelf: "center",
-    marginVertical: 10,
     borderRadius: 8,
+    marginVertical: 10,
   },
-  section: { marginTop: 24, fontSize: 18, fontWeight: "bold" },
-  checkboxRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: 6,
+  section: {
+    marginTop: 24,
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 8,
   },
-  checkboxText: { marginLeft: 10 },
   removable: { marginLeft: 10, marginTop: 4 },
-  button: { backgroundColor: APP_COLOR, marginVertical: 20 },
+  saveBtn: { backgroundColor: APP_COLOR, marginVertical: 20 },
 });
