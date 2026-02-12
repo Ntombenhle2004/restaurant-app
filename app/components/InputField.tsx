@@ -1,10 +1,20 @@
-import { View, Text, TextInput, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  Platform,
+  KeyboardTypeOptions,
+} from "react-native";
 
 type Props = {
   label: string;
   value: string;
   onChangeText: (text: string) => void;
   secureTextEntry?: boolean;
+  placeholder?: string;
+  keyboardType?: KeyboardTypeOptions;
+  maxLength?: number;
 };
 
 export default function InputField({
@@ -12,6 +22,9 @@ export default function InputField({
   value,
   onChangeText,
   secureTextEntry = false,
+  placeholder,
+  keyboardType = "default",
+  maxLength,
 }: Props) {
   return (
     <View style={styles.container}>
@@ -20,6 +33,10 @@ export default function InputField({
         value={value}
         onChangeText={onChangeText}
         secureTextEntry={secureTextEntry}
+        placeholder={placeholder}
+        placeholderTextColor="#ccc"
+        keyboardType={keyboardType}
+        maxLength={maxLength}
         style={styles.input}
       />
     </View>
@@ -28,16 +45,26 @@ export default function InputField({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 14,
+    marginBottom: 20,
+    width: "100%",
   },
   label: {
-    marginBottom: 4,
-    fontWeight: "600",
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#000",
+    marginBottom: 5,
+    letterSpacing: 1,
+    textTransform: "uppercase",
   },
   input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    padding: 12,
-    borderRadius: 6,
+    borderBottomWidth: 1,
+    borderColor: "#eee",
+    paddingVertical: 8,
+    fontSize: 15,
+    color: "#000",
+    // Removes the default focus ring on web
+    ...Platform.select({
+      web: { outlineStyle: "none" } as any,
+    }),
   },
 });

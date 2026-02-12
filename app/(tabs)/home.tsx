@@ -6,15 +6,14 @@ import {
   TouchableOpacity,
   FlatList,
   TextInput,
-  Alert,
+  Platform,
 } from "react-native";
-import { Icon, Button } from "react-native-elements";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../../services/firebase";
 import { useRouter, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useCallback } from "react";
+import { Icon } from "react-native-elements"; // Back to your original Icon component
 
 type Food = {
   id: string;
@@ -35,110 +34,70 @@ type CartItem = {
 
 const APP_COLOR = "#000";
 
+// EXACT MATCH FROM YOUR MANAGE FOOD
 const CATEGORIES = [
   "All",
   "Burgers",
-  "Mains",
-  "Starters",
+  "Pizza",
+  "Pasta",
+  "Seafood",
+  "Salads",
   "Desserts",
-  "Beverages",
+  "Drinks",
+  "combos",
 ];
 
 export default function HomeScreen() {
   const router = useRouter();
-
   const [foods, setFoods] = useState<Food[]>([]);
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
 
-  useEffect(() => {
-    loadFoods();
-    loadCart();
-  }, []);
-
-  // Reload cart when screen comes into focus
-  useFocusEffect(
-    useCallback(() => {
-      loadCart();
-    }, [])
-  );
-
   const loadFoods = async () => {
     try {
       const snap = await getDocs(collection(db, "foods"));
-      const list: Food[] = snap.docs.map((doc) => ({
+      const list = snap.docs.map((doc) => ({
         id: doc.id,
         ...(doc.data() as Omit<Food, "id">),
-      }));
+      })) as Food[];
       setFoods(list);
     } catch (error) {
       console.error("Error loading foods:", error);
-      Alert.alert("Error", "Failed to load menu items");
     }
   };
 
   const loadCart = async () => {
     try {
       const storedCart = await AsyncStorage.getItem("cart");
-      if (storedCart) {
-        setCartItems(JSON.parse(storedCart));
-      }
+      if (storedCart) setCartItems(JSON.parse(storedCart));
     } catch (error) {
       console.error("Error loading cart:", error);
     }
   };
 
-  const saveCart = async (items: CartItem[]) => {
-    try {
-      setCartItems(items);
-      await AsyncStorage.setItem("cart", JSON.stringify(items));
-    } catch (error) {
-      console.error("Error saving cart:", error);
-    }
-  };
+  useEffect(() => {
+    loadFoods();
+    loadCart();
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadCart();
+    }, []),
+  );
 
   const filteredFoods = foods.filter((food) => {
     const matchesSearch = food.name
       .toLowerCase()
       .includes(search.toLowerCase());
-
     const matchesCategory =
       selectedCategory === "All" || food.category === selectedCategory;
-
     return matchesSearch && matchesCategory;
   });
 
-  const addToCart = async (food: Food) => {
-    const existing = cartItems.find((item) => item.id === food.id);
-    let updatedCart: CartItem[];
-
-    if (existing) {
-      updatedCart = cartItems.map((item) =>
-        item.id === food.id ? { ...item, quantity: item.quantity + 1 } : item
-      );
-    } else {
-      const newItem: CartItem = {
-        id: food.id,
-        name: food.name,
-        price: food.price,
-        quantity: 1,
-        image: food.image,
-      };
-      updatedCart = [...cartItems, newItem];
-    }
-
-    await saveCart(updatedCart);
-
-    // Show success feedback
-    Alert.alert("Added to Cart", `${food.name} has been added to your cart`, [
-      { text: "OK" },
-    ]);
-  };
-
-  const getTotalItems = () => {
-    return cartItems.reduce((sum, item) => sum + item.quantity, 0);
-  };
+  const getTotalItems = () =>
+    cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
     <View style={styles.container}>
@@ -147,19 +106,20 @@ export default function HomeScreen() {
         keyExtractor={(item) => item.id}
         numColumns={2}
         showsVerticalScrollIndicator={false}
-        columnWrapperStyle={{ justifyContent: "space-between" }}
+        columnWrapperStyle={styles.row}
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={
           <>
             <Text style={styles.title}>What do you want to eat today?</Text>
 
+            {/* RESTORED EXACT SEARCH BOX STYLE */}
             <View style={styles.searchBox}>
               <Icon name="search" type="feather" color="#888" />
               <TextInput
                 placeholder="Search food..."
                 value={search}
                 onChangeText={setSearch}
-                style={styles.searchInput}
+                // style={styles.searchInput}
                 placeholderTextColor="#888"
               />
             </View>
@@ -167,8 +127,8 @@ export default function HomeScreen() {
             <FlatList
               data={CATEGORIES}
               horizontal
-              keyExtractor={(item) => item}
               showsHorizontalScrollIndicator={false}
+              keyExtractor={(item) => item}
               contentContainerStyle={styles.categories}
               renderItem={({ item }) => (
                 <TouchableOpacity
@@ -202,25 +162,16 @@ export default function HomeScreen() {
             }
           >
             <Image source={{ uri: item.image }} style={styles.image} />
-            <Text style={styles.name}>{item.name}</Text>
+            <Text style={styles.name} numberOfLines={1}>
+              {item.name}
+            </Text>
             <Text style={styles.price}>R {item.price}</Text>
-
-            {/* <Button
-              title="Add to Cart"
-              buttonStyle={styles.addButton}
-              onPress={(e) => {
-                if (e && e.stopPropagation) {
-                  e.stopPropagation();
-                }
-                addToCart(item);
-              }}
-            /> */}
           </TouchableOpacity>
         )}
       />
 
       {/* Floating Cart Button */}
-      {/* {cartItems.length > 0 && (
+      {cartItems.length > 0 && (
         <TouchableOpacity
           style={styles.cartButton}
           onPress={() => router.push("/cart")}
@@ -230,7 +181,7 @@ export default function HomeScreen() {
             <Text style={styles.badgeText}>{getTotalItems()}</Text>
           </View>
         </TouchableOpacity>
-      )} */}
+      )}
     </View>
   );
 }
@@ -240,13 +191,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
   },
-
   listContent: {
     paddingHorizontal: 16,
     paddingBottom: 100,
-    backgroundColor: "#fff",
   },
-
   title: {
     fontSize: 26,
     fontWeight: "bold",
@@ -254,6 +202,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     color: APP_COLOR,
   },
+  // EXACT CSS REPLICATED
+  // Inside your styles object:
 
   searchBox: {
     flexDirection: "row",
@@ -263,18 +213,23 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 10,
     marginBottom: 16,
+    // Ensure the container doesn't show a border either
+    borderWidth: 0,
   },
-
   searchInput: {
     marginLeft: 8,
     flex: 1,
     fontSize: 16,
+    color: "#000",
+    ...Platform.select({
+      web: {
+        outlineStyle: "none", // THIS removes the black border on web
+      },
+    }),
   },
-
   categories: {
     marginBottom: 20,
   },
-
   categoryButton: {
     height: 36,
     minWidth: 90,
@@ -285,21 +240,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 10,
   },
-
   categoryButtonActive: {
     backgroundColor: APP_COLOR,
   },
-
   categoryText: {
     fontSize: 14,
     color: "#333",
   },
-
   categoryTextActive: {
     color: "#fff",
     fontWeight: "600",
   },
-
+  row: {
+    justifyContent: "space-between",
+  },
   card: {
     backgroundColor: "#f9f9f9",
     borderRadius: 12,
@@ -307,32 +261,26 @@ const styles = StyleSheet.create({
     width: "48%",
     marginBottom: 16,
     elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
-
   image: {
     width: "100%",
     height: 120,
     borderRadius: 8,
     marginBottom: 8,
   },
-
   name: {
     fontSize: 16,
     fontWeight: "600",
   },
-
   price: {
     fontSize: 14,
     color: "#555",
     marginVertical: 4,
   },
-
-  addButton: {
-    backgroundColor: APP_COLOR,
-    borderRadius: 6,
-    marginTop: 6,
-  },
-
   cartButton: {
     position: "absolute",
     bottom: 20,
@@ -344,12 +292,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     elevation: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
   },
-
   badge: {
     position: "absolute",
     top: -5,
@@ -361,7 +304,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-
   badgeText: {
     color: "#fff",
     fontSize: 12,

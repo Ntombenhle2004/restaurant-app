@@ -5,236 +5,312 @@ import {
   Image,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
   Alert,
 } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
-import { db } from "../../services/firebase";
+import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
+import { useEffect, useState, useCallback } from "react";
 import { doc, getDoc } from "firebase/firestore";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { db } from "../../services/firebase";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-type Addon = {
+type FoodItem = {
   id: string;
   name: string;
   price: number;
   image: string;
+  description: string;
+  category: string;
+  addons?: FoodItem[];
+  removables?: { name: string }[];
 };
 
 export default function FoodDetails() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id } = useLocalSearchParams();
   const router = useRouter();
 
-  const [food, setFood] = useState<any>(null);
-  const [addons, setAddons] = useState<Addon[]>([]);
-  const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
-  const [removed, setRemoved] = useState<string[]>([]);
-  const [qty, setQty] = useState(1);
+  const [food, setFood] = useState<FoodItem | null>(null);
+  const [loading, setLoading] = useState(true);
 
+  // Customization States
+  const [quantity, setQuantity] = useState(1);
+  const [selectedAddons, setSelectedAddons] = useState<FoodItem[]>([]);
+  const [excludedItems, setExcludedItems] = useState<string[]>([]);
+
+  // RESET STATE WHEN VIEWING NEW PRODUCT OR RETURNING
+  useFocusEffect(
+    useCallback(() => {
+      setQuantity(1);
+      setSelectedAddons([]);
+      setExcludedItems([]);
+    }, [id]),
+  );
 
   useEffect(() => {
-    if (id) loadFood(id);
+    const fetchFood = async () => {
+      try {
+        const docRef = doc(db, "foods", id as string);
+        const snap = await getDoc(docRef);
+        if (snap.exists()) {
+          setFood({ id: snap.id, ...snap.data() } as FoodItem);
+        }
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchFood();
   }, [id]);
 
-  const loadFood = async (foodId: string) => {
-    const snap = await getDoc(doc(db, "foods", foodId));
-    if (!snap.exists()) return;
+  const calculateTotal = () => {
+    if (!food) return 0;
+    const addonsTotal = selectedAddons.reduce(
+      (sum, item) => sum + item.price,
+      0,
+    );
+    return (food.price + addonsTotal) * quantity;
+  };
 
-    const data = snap.data();
-    setFood({ id: snap.id, ...data });
+  const toggleAddon = (addon: FoodItem) => {
+    const exists = selectedAddons.find((a) => a.id === addon.id);
+    setSelectedAddons(
+      exists
+        ? selectedAddons.filter((a) => a.id !== addon.id)
+        : [...selectedAddons, addon],
+    );
+  };
 
-    setSelectedAddons([]);
-    setRemoved([]);
-    setQty(1);
+  const toggleRemovable = (name: string) => {
+    setExcludedItems((prev) =>
+      prev.includes(name) ? prev.filter((i) => i !== name) : [...prev, name],
+    );
+  };
 
-    if (data.addons?.length) {
-      const addonDocs = await Promise.all(
-        data.addons.map((addonId: string) => getDoc(doc(db, "foods", addonId)))
-      );
-
-      setAddons(
-        addonDocs
-          .filter((d) => d.exists())
-          .map((d) => ({ id: d.id, ...(d.data() as any) }))
-      );
-    } else {
-      setAddons([]);
+  const addToCart = async () => {
+    try {
+      const cartData = await AsyncStorage.getItem("cart");
+      let cart = cartData ? JSON.parse(cartData) : [];
+      const newItem = {
+        cartId: Date.now().toString(),
+        id: food?.id,
+        name: food?.name,
+        image: food?.image,
+        quantity,
+        selectedAddons,
+        excludedItems,
+        pricePerUnit:
+          (food?.price || 0) + selectedAddons.reduce((s, i) => s + i.price, 0),
+        totalPrice: calculateTotal(),
+      };
+      cart.push(newItem);
+      await AsyncStorage.setItem("cart", JSON.stringify(cart));
+      router.replace("/(tabs)/home"); // Go back to home
+    } catch (e) {
+      Alert.alert("Error", "Could not add to cart");
     }
   };
 
-  const toggleAddon = (addonId: string) => {
-    setSelectedAddons((prev) =>
-      prev.includes(addonId)
-        ? prev.filter((id) => id !== addonId)
-        : [...prev, addonId]
+  if (loading)
+    return (
+      <ActivityIndicator size="large" color="#000" style={styles.loader} />
     );
-  };
-
-  const toggleRemove = (item: string) => {
-    setRemoved((prev) =>
-      prev.includes(item) ? prev.filter((i) => i !== item) : [...prev, item]
+  if (!food)
+    return (
+      <View style={styles.container}>
+        <Text>Food not found</Text>
+      </View>
     );
-  };
-
-  const totalPrice = () => {
-    const addonTotal = addons
-      .filter((a) => selectedAddons.includes(a.id))
-      .reduce((sum, a) => sum + a.price, 0);
-
-    return (food.price + addonTotal) * qty;
-  };
-
-
-
-  const addToCart = async () => {
-    const stored = await AsyncStorage.getItem("cart");
-    const cart = stored ? JSON.parse(stored) : [];
-
-    const addonTotal = addons
-      .filter((a) => selectedAddons.includes(a.id))
-      .reduce((sum, a) => sum + a.price, 0);
-
-    const itemPrice = food.price + addonTotal;
-
-    cart.push({
-      id: Date.now().toString(),
-      foodId: food.id,
-      name: food.name,
-      image: food.image,
-      price: itemPrice, 
-      quantity: qty,
-      addons: addons.filter((a) => selectedAddons.includes(a.id)),
-      removed,
-    });
-
-    await AsyncStorage.setItem("cart", JSON.stringify(cart));
-    Alert.alert("Added to cart");
-    router.back();
-  };
-
-  if (!food) return <Text style={{ padding: 20 }}>Loading...</Text>;
 
   return (
-    <ScrollView style={styles.container}>
-      <Image source={{ uri: food.image }} style={styles.image} />
+    <View style={styles.container}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 120 }}
+      >
+        <Image source={{ uri: food.image }} style={styles.mainImage} />
 
-      <View style={styles.content}>
-        <Text style={styles.name}>{food.name}</Text>
-        <Text style={styles.desc}>{food.description}</Text>
-        <Text style={styles.price}>R {food.price}</Text>
+        <View style={styles.infoSection}>
+          <Text style={styles.categoryLabel}>{food.category}</Text>
+          <Text style={styles.foodName}>{food.name}</Text>
+          <Text style={styles.foodDescription}>{food.description}</Text>
+          <Text style={styles.basePrice}>R {food.price.toFixed(2)}</Text>
+        </View>
 
-        {/* ADD-ONS */}
-        {addons.length > 0 && (
-          <>
-            <Text style={styles.section}>Add-ons</Text>
+        {/* REMOVABLES SECTION */}
+        {/* REMOVABLES SECTION */}
+        {food.removables && food.removables.length > 0 && (
+          <View style={styles.extrasSection}>
+            <Text style={styles.extrasTitle}>REMOVE INGREDIENTS?</Text>
+            {food.removables.map((item, index) => {
+              const isRemoved = excludedItems.includes(item.name);
+              return (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.addonCard}
+                  onPress={() => toggleRemovable(item.name)}
+                >
+                  <View
+                    style={[
+                      styles.checkbox,
+                      isRemoved && styles.checkboxSelected,
+                    ]}
+                  >
+                    {isRemoved && (
+                      <Ionicons name="checkmark" size={16} color="#fff" />
+                    )}
+                  </View>
 
-            {addons.map((a) => (
-              <TouchableOpacity
-                key={a.id}
-                style={styles.row}
-                onPress={() => toggleAddon(a.id)}
-              >
-                <Ionicons
-                  name={
-                    selectedAddons.includes(a.id)
-                      ? "checkbox"
-                      : "square-outline"
-                  }
-                  size={24}
-                />
-                <Image source={{ uri: a.image }} style={styles.addonImg} />
-                <View>
-                  <Text style={styles.rowTitle}>{a.name}</Text>
-                  <Text style={styles.rowSub}>+R {a.price}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </>
+                  {/* Added a View with marginLeft to create the space you wanted */}
+                  <View style={[styles.addonInfo, { marginLeft: 15 }]}>
+                    <Text style={styles.addonName}>No {item.name}</Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         )}
 
-        {food.removables?.length > 0 && (
-          <>
-            <Text style={styles.section}>Remove ingredients</Text>
-            {food.removables.map((r: string) => (
-              <TouchableOpacity
-                key={r}
-                style={styles.removeRow}
-                onPress={() => toggleRemove(r)}
-              >
-                <Ionicons
-                  name={removed.includes(r) ? "checkbox" : "square-outline"}
-                  size={22}
-                />
-                <Text style={styles.removeText}>{r}</Text>
-              </TouchableOpacity>
-            ))}
-          </>
+        {/* ADDONS SECTION (MATCHING SCREENSHOT) */}
+        {food.addons && food.addons.length > 0 && (
+          <View style={styles.extrasSection}>
+            <Text style={styles.extrasTitle}>WOULD YOU LIKE TO ADD?</Text>
+            {food.addons.map((addon) => {
+              const isSelected = selectedAddons.some((a) => a.id === addon.id);
+              return (
+                <TouchableOpacity
+                  key={addon.id}
+                  style={styles.addonCard}
+                  onPress={() => toggleAddon(addon)}
+                >
+                  <View
+                    style={[
+                      styles.checkbox,
+                      isSelected && styles.checkboxSelected,
+                    ]}
+                  >
+                    {isSelected && (
+                      <Ionicons name="checkmark" size={16} color="#fff" />
+                    )}
+                  </View>
+
+                  {/* Fixed image size - contain ensures it doesn't stretch */}
+                  <Image
+                    source={{ uri: addon.image }}
+                    style={styles.addonImage}
+                    resizeMode="contain"
+                  />
+
+                  <View style={styles.addonInfo}>
+                    <Text style={styles.addonName}>{addon.name}</Text>
+                    <Text style={styles.addonPrice}>
+                      +R{addon.price.toFixed(2)}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         )}
-        <View style={styles.qtyRow}>
-          <TouchableOpacity onPress={() => setQty(Math.max(1, qty - 1))}>
-            <Ionicons name="remove-circle" size={30} />
+      </ScrollView>
+
+      {/* FOOTER */}
+      <View style={styles.footer}>
+        <View style={styles.stepper}>
+          <TouchableOpacity
+            onPress={() => quantity > 1 && setQuantity(quantity - 1)}
+          >
+            <Ionicons name="remove-circle-outline" size={32} color="black" />
           </TouchableOpacity>
-          <Text style={styles.qty}>{qty}</Text>
-          <TouchableOpacity onPress={() => setQty(qty + 1)}>
-            <Ionicons name="add-circle" size={30} />
+          <Text style={styles.quantityText}>{quantity}</Text>
+          <TouchableOpacity onPress={() => setQuantity(quantity + 1)}>
+            <Ionicons name="add-circle-outline" size={32} color="black" />
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.cartBtn} onPress={addToCart}>
-          <Text style={styles.cartText}>Add to cart · R {totalPrice()}</Text>
+        <TouchableOpacity style={styles.addButton} onPress={addToCart}>
+          <Text style={styles.addButtonText}>
+            Add to Cart • R{calculateTotal().toFixed(2)}
+          </Text>
         </TouchableOpacity>
       </View>
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
-  image: { width: "100%", height: 260 },
-  content: { padding: 16 },
-
-  name: { fontSize: 22, fontWeight: "bold" },
-  desc: { color: "#555", marginVertical: 6 },
-  price: { fontSize: 18, fontWeight: "600" },
-
-  section: {
-    marginTop: 24,
-    fontSize: 18,
-    fontWeight: "bold",
+  loader: { flex: 1, justifyContent: "center",  },
+  mainImage: { width: "100%", height: 250 },
+  infoSection: { padding: 20 ,},
+  categoryLabel: {
+    color: "#888",
+    fontWeight: "600",
+    textTransform: "uppercase",
   },
+  foodName: { fontSize: 26, fontWeight: "bold", marginVertical: 5 },
+  foodDescription: { fontSize: 15, color: "#666", lineHeight: 20 },
+  basePrice: { fontSize: 22, fontWeight: "700", marginTop: 10 },
 
-  row: {
+  extrasSection: { paddingHorizontal: 20, marginTop: 10 ,},
+  extrasTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    marginBottom: 15,
+    color: "#333",
+    
+  },
+  addonCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F6F6F6",
+    backgroundColor: "#F9F9F7",
     padding: 12,
-    borderRadius: 12,
-    marginTop: 10,
+    borderRadius: 10,
+    marginBottom: 10,
   },
-  addonImg: { width: 45, height: 45, marginHorizontal: 12 },
-  rowTitle: { fontWeight: "600" },
-  rowSub: { color: "#555" },
-
-  removeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 10,
-  },
-  removeText: { marginLeft: 10 },
-
-  qtyRow: {
-    flexDirection: "row",
-    alignItems: "center",
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderWidth: 1.5,
+    borderColor: "#CCC",
+    borderRadius: 4,
+    backgroundColor: "#FFF",
     justifyContent: "center",
-    marginVertical: 24,
-  },
-  qty: { fontSize: 20, marginHorizontal: 20 },
-
-  cartBtn: {
-    backgroundColor: "#000",
-    padding: 16,
-    borderRadius: 14,
     alignItems: "center",
   },
-  cartText: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  checkboxSelected: {
+    backgroundColor: "#000",
+    borderColor: "#000",
+  },
+  addonImage: {
+    width: 60,
+    height: 60,
+    marginHorizontal: 12,
+  },
+  addonInfo: { flex: 1 },
+  addonName: { fontSize: 15, fontWeight: "500" },
+  addonPrice: { fontSize: 13, color: "#666" },
+
+  footer: {
+    position: "absolute",
+    bottom: 0,
+    flexDirection: "row",
+    padding: 20,
+    paddingBottom: 30,
+    borderTopWidth: 1,
+    borderColor: "#EEE",
+    backgroundColor: "#FFF",
+    alignItems: "center",
+  },
+  stepper: { flexDirection: "row", alignItems: "center", marginRight: 15 },
+  quantityText: { fontSize: 20, marginHorizontal: 12 },
+  addButton: {
+    flex: 1,
+    backgroundColor: "#000",
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  addButtonText: { color: "#fff", fontSize: 16,paddingHorizontal: 20, fontWeight: "600" },
 });
