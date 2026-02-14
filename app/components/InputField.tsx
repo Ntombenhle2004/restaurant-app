@@ -8,7 +8,7 @@ import {
 } from "react-native";
 
 type Props = {
-  label: string;
+  label?: string;
   value: string;
   onChangeText: (text: string) => void;
   secureTextEntry?: boolean;
