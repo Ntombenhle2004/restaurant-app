@@ -7,11 +7,13 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Platform,
+  ToastAndroid,
 } from "react-native";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { useEffect, useState, useCallback } from "react";
 import { doc, getDoc } from "firebase/firestore";
-import { db } from "../../services/firebase";
+import { db, auth } from "../../services/firebase";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -27,33 +29,56 @@ type FoodItem = {
 };
 
 export default function FoodDetails() {
-  const { id } = useLocalSearchParams();
+  const { id, cartItemId } = useLocalSearchParams();
   const router = useRouter();
 
   const [food, setFood] = useState<FoodItem | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showToast, setShowToast] = useState(false);
 
-  // Customization States
   const [quantity, setQuantity] = useState(1);
   const [selectedAddons, setSelectedAddons] = useState<FoodItem[]>([]);
   const [excludedItems, setExcludedItems] = useState<string[]>([]);
 
-  // RESET STATE WHEN VIEWING NEW PRODUCT OR RETURNING
   useFocusEffect(
     useCallback(() => {
-      setQuantity(1);
-      setSelectedAddons([]);
-      setExcludedItems([]);
-    }, [id]),
+      if (!cartItemId) {
+        setQuantity(1);
+        setSelectedAddons([]);
+        setExcludedItems([]);
+      }
+    }, [id, cartItemId]),
   );
 
   useEffect(() => {
-    const fetchFood = async () => {
+    const fetchFoodAndPreferences = async () => {
+      setLoading(true);
       try {
         const docRef = doc(db, "foods", id as string);
         const snap = await getDoc(docRef);
+
         if (snap.exists()) {
-          setFood({ id: snap.id, ...snap.data() } as FoodItem);
+          const foodData = { id: snap.id, ...snap.data() } as FoodItem;
+          setFood(foodData);
+
+          if (cartItemId) {
+            const user = auth.currentUser;
+            // FIX: Match the logic - use cart_guest if no user
+            const cartKey = user ? `cart_${user.uid}` : "cart_guest";
+            const cartData = await AsyncStorage.getItem(cartKey);
+
+            if (cartData) {
+              const cart = JSON.parse(cartData);
+              const existingItem = cart.find(
+                (item: any) => item.id === cartItemId,
+              );
+              if (existingItem) {
+                setQuantity(existingItem.quantity);
+                setSelectedAddons(existingItem.selectedAddons || []);
+                setExcludedItems(existingItem.excludedItems || []);
+              }
+            }
+          }
         }
       } catch (error) {
         console.error(error);
@@ -61,8 +86,8 @@ export default function FoodDetails() {
         setLoading(false);
       }
     };
-    fetchFood();
-  }, [id]);
+    fetchFoodAndPreferences();
+  }, [id, cartItemId]);
 
   const calculateTotal = () => {
     if (!food) return 0;
@@ -90,25 +115,53 @@ export default function FoodDetails() {
 
   const addToCart = async () => {
     try {
-      const cartData = await AsyncStorage.getItem("cart");
+      const user = auth.currentUser;
+      // FIX: Key must be "cart_guest" for logged-out users to match CartScreen
+      const cartKey = user ? `cart_${user.uid}` : "cart_guest";
+
+      const cartData = await AsyncStorage.getItem(cartKey);
       let cart = cartData ? JSON.parse(cartData) : [];
+
+      const unitPrice =
+        (food?.price || 0) + selectedAddons.reduce((s, i) => s + i.price, 0);
+
       const newItem = {
-        cartId: Date.now().toString(),
-        id: food?.id,
+        id: cartItemId || Date.now().toString(),
+        foodId: food?.id,
         name: food?.name,
         image: food?.image,
         quantity,
         selectedAddons,
         excludedItems,
-        pricePerUnit:
-          (food?.price || 0) + selectedAddons.reduce((s, i) => s + i.price, 0),
-        totalPrice: calculateTotal(),
+        price: unitPrice,
       };
-      cart.push(newItem);
-      await AsyncStorage.setItem("cart", JSON.stringify(cart));
-      router.replace("/(tabs)/home"); // Go back to home
+
+      if (cartItemId) {
+        cart = cart.map((item: any) =>
+          item.id === cartItemId ? newItem : item,
+        );
+      } else {
+        cart.push(newItem);
+      }
+
+      await AsyncStorage.setItem(cartKey, JSON.stringify(cart));
+
+      // UI Feedback
+      if (!cartItemId) {
+        if (Platform.OS === "android") {
+          ToastAndroid.show("Added to cart!", ToastAndroid.SHORT);
+        } else {
+          setShowToast(true);
+          setTimeout(() => setShowToast(false), 3000);
+        }
+      }
+
+      // If editing, go back to cart. If adding fresh, user stays here or can go to cart.
+      if (cartItemId) {
+        router.push("/cart");
+      }
     } catch (e) {
-      Alert.alert("Error", "Could not add to cart");
+      Alert.alert("Error", "Could not save to cart");
     }
   };
 
@@ -138,8 +191,7 @@ export default function FoodDetails() {
           <Text style={styles.basePrice}>R {food.price.toFixed(2)}</Text>
         </View>
 
-        {/* REMOVABLES SECTION */}
-        {/* REMOVABLES SECTION */}
+        {/* REMOVABLES */}
         {food.removables && food.removables.length > 0 && (
           <View style={styles.extrasSection}>
             <Text style={styles.extrasTitle}>REMOVE INGREDIENTS?</Text>
@@ -161,8 +213,6 @@ export default function FoodDetails() {
                       <Ionicons name="checkmark" size={16} color="#fff" />
                     )}
                   </View>
-
-                  {/* Added a View with marginLeft to create the space you wanted */}
                   <View style={[styles.addonInfo, { marginLeft: 15 }]}>
                     <Text style={styles.addonName}>No {item.name}</Text>
                   </View>
@@ -172,7 +222,7 @@ export default function FoodDetails() {
           </View>
         )}
 
-        {/* ADDONS SECTION (MATCHING SCREENSHOT) */}
+        {/* ADDONS */}
         {food.addons && food.addons.length > 0 && (
           <View style={styles.extrasSection}>
             <Text style={styles.extrasTitle}>WOULD YOU LIKE TO ADD?</Text>
@@ -194,14 +244,11 @@ export default function FoodDetails() {
                       <Ionicons name="checkmark" size={16} color="#fff" />
                     )}
                   </View>
-
-                  {/* Fixed image size - contain ensures it doesn't stretch */}
                   <Image
                     source={{ uri: addon.image }}
                     style={styles.addonImage}
                     resizeMode="contain"
                   />
-
                   <View style={styles.addonInfo}>
                     <Text style={styles.addonName}>{addon.name}</Text>
                     <Text style={styles.addonPrice}>
@@ -214,6 +261,13 @@ export default function FoodDetails() {
           </View>
         )}
       </ScrollView>
+
+      {/* WEB TOAST NOTIFICATION */}
+      {showToast && (
+        <View style={styles.webToast}>
+          <Text style={styles.webToastText}>Added to cart! </Text>
+        </View>
+      )}
 
       {/* FOOTER */}
       <View style={styles.footer}>
@@ -231,7 +285,8 @@ export default function FoodDetails() {
 
         <TouchableOpacity style={styles.addButton} onPress={addToCart}>
           <Text style={styles.addButtonText}>
-            Add to Cart • R{calculateTotal().toFixed(2)}
+            {cartItemId ? "ADD TO CART" : "ADD TO CART"} • R
+            {calculateTotal().toFixed(2)}
           </Text>
         </TouchableOpacity>
       </View>
@@ -241,9 +296,9 @@ export default function FoodDetails() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
-  loader: { flex: 1, justifyContent: "center",  },
+  loader: { flex: 1, justifyContent: "center" },
   mainImage: { width: "100%", height: 250 },
-  infoSection: { padding: 20 ,},
+  infoSection: { padding: 20 },
   categoryLabel: {
     color: "#888",
     fontWeight: "600",
@@ -252,14 +307,12 @@ const styles = StyleSheet.create({
   foodName: { fontSize: 26, fontWeight: "bold", marginVertical: 5 },
   foodDescription: { fontSize: 15, color: "#666", lineHeight: 20 },
   basePrice: { fontSize: 22, fontWeight: "700", marginTop: 10 },
-
-  extrasSection: { paddingHorizontal: 20, marginTop: 10 ,},
+  extrasSection: { paddingHorizontal: 20, marginTop: 10 },
   extrasTitle: {
     fontSize: 16,
     fontWeight: "700",
     marginBottom: 15,
     color: "#333",
-    
   },
   addonCard: {
     flexDirection: "row",
@@ -279,18 +332,24 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  checkboxSelected: {
-    backgroundColor: "#000",
-    borderColor: "#000",
-  },
-  addonImage: {
-    width: 60,
-    height: 60,
-    marginHorizontal: 12,
-  },
+  checkboxSelected: { backgroundColor: "#000", borderColor: "#000" },
+  addonImage: { width: 60, height: 60, marginHorizontal: 12 },
   addonInfo: { flex: 1 },
   addonName: { fontSize: 15, fontWeight: "500" },
   addonPrice: { fontSize: 13, color: "#666" },
+
+  webToast: {
+    position: "absolute",
+    bottom: 100,
+    alignSelf: "center",
+    backgroundColor: "#333",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 25,
+    zIndex: 999,
+    elevation: 5,
+  },
+  webToastText: { color: "#fff", fontWeight: "600" },
 
   footer: {
     position: "absolute",
@@ -312,5 +371,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
   },
-  addButtonText: { color: "#fff", fontSize: 16,paddingHorizontal: 20, fontWeight: "600" },
+  addButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    paddingHorizontal: 10,
+    fontWeight: "700",
+    letterSpacing: 1,
+  },
 });
