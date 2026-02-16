@@ -179,9 +179,9 @@ export default function FoodDetails() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-                    <Text style={styles.brandTitle}>FOOD DETAILS</Text>
-                    <View style={styles.dividerGold} />
-                  </View>
+        <Text style={styles.brandTitle}>FOOD DETAILS</Text>
+        <View style={styles.dividerGold} />
+      </View>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 120 }}
@@ -189,8 +189,9 @@ export default function FoodDetails() {
         <Image source={{ uri: food.image }} style={styles.mainImage} />
 
         <View style={styles.infoSection}>
-          <Text style={styles.categoryLabel}>{food.category}</Text>
           <Text style={styles.foodName}>{food.name}</Text>
+          {/* <Text style={styles.categoryLabel}>{food.category}</Text> */}
+
           <Text style={styles.foodDescription}>{food.description}</Text>
           <Text style={styles.basePrice}>R {food.price.toFixed(2)}</Text>
         </View>

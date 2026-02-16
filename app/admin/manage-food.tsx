@@ -1148,8 +1148,10 @@ export default function ManageFood() {
   return (
     <View style={styles.container}>
       {/* Header Updated to Column */}
-      <View style={styles.header}>
-        <Text style={styles.title}>manage food</Text>
+  <View style={styles.header}>
+          <Text style={styles.brandTitle}>MANAGE FOOD</Text>
+          <View style={styles.dividerGold} />
+        </View>
         <TouchableOpacity
           style={styles.addButton}
           onPress={() => {
@@ -1159,7 +1161,7 @@ export default function ManageFood() {
         >
           <Text style={styles.addButtonText}>Add food</Text>
         </TouchableOpacity>
-      </View>
+     
 
       <FlatList
         data={foods}
@@ -1354,20 +1356,25 @@ export default function ManageFood() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, backgroundColor: "#FAFAFA" },
-  header: {
-    flexDirection: "column",
-    marginBottom: 24,
-    gap: 8,
+  header: { alignItems: "center", marginTop: 1, marginBottom: 2 },
+  brandTitle: { fontSize: 24, letterSpacing: 6, fontWeight: "300" },
+  dividerGold: {
+    width: 80,
+    height: 2,
+    backgroundColor: "#9c8966",
+    marginTop: 10,
   },
   addButton: {
     backgroundColor: "black",
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 4,
+    marginBottom:10,
+    marginTop:10,
     alignSelf: "flex-end", // <--- This pushes the button to the right
   },
   title: { fontSize: 28, fontWeight: "700", textTransform: "lowercase" },
- 
+
   addButtonText: {
     color: "#fff", // White text
     fontWeight: "600",

@@ -184,6 +184,7 @@ export default function HomeScreen() {
               <Text style={styles.name} numberOfLines={1}>
                 {item.name}
               </Text>
+              <Text style={styles.description}>{item.description}</Text>
               <Text style={styles.price}>R {item.price}</Text>
             </View>
           </TouchableOpacity>
@@ -280,6 +281,13 @@ const styles = StyleSheet.create({
     color: "#1a1a1a",
     textTransform: "uppercase",
     letterSpacing: 1,
+  },
+  description: {
+    fontSize: 13,
+    color: "#999",
+    fontStyle: "italic",
+    marginTop: 1, 
+    paddingRight: 50, 
   },
   price: { fontSize: 14, color: GOLD_COLOR, marginTop: 4, fontWeight: "700" },
 });
