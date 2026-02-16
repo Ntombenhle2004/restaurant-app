@@ -157,11 +157,16 @@ export default function CartScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>CART</Text>
+        <Text style={styles.brandTitle}>CART</Text>
+        <View style={styles.dividerGold} />
+      </View>
+
+      <View style={{ width: "100%", alignItems: "flex-end" }}>
         <TouchableOpacity onPress={clearCart}>
           <Text style={styles.clearText}>CLEAR ALL</Text>
         </TouchableOpacity>
       </View>
+
 
       <FlatList
         data={cartItems}
@@ -243,19 +248,24 @@ export default function CartScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 20,
+  header: { alignItems: "center", marginTop: 16, marginBottom: 2 },
+  brandTitle: { fontSize: 24, letterSpacing: 6, fontWeight: "300" },
+  dividerGold: {
+    width: 40,
+    height: 2,
+    backgroundColor: "#9c8966",
     marginTop: 10,
   },
-  headerTitle: { fontSize: 14, fontWeight: "700", letterSpacing: 2 },
   clearText: {
     fontSize: 10,
     color: "#ff4444",
     fontWeight: "700",
     letterSpacing: 1,
+    marginBottom: 15,
+    textAlign: "right", 
+    alignSelf: "flex-end", 
+    width: "100%", 
+    paddingRight: 20,
   },
   itemCard: {
     flexDirection: "row",

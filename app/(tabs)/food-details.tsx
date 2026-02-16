@@ -178,6 +178,10 @@ export default function FoodDetails() {
 
   return (
     <View style={styles.container}>
+      <View style={styles.header}>
+                    <Text style={styles.brandTitle}>FOOD DETAILS</Text>
+                    <View style={styles.dividerGold} />
+                  </View>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 120 }}
@@ -296,8 +300,16 @@ export default function FoodDetails() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
+  header: { alignItems: "center", marginTop: 16, marginBottom: 2 },
+  brandTitle: { fontSize: 24, letterSpacing: 6, fontWeight: "300" },
+  dividerGold: {
+    width: 80,
+    height: 2,
+    backgroundColor: "#9c8966",
+    marginTop: 10,
+  },
   loader: { flex: 1, justifyContent: "center" },
-  mainImage: { width: "100%", height: 250 },
+  mainImage: { width: "100%", height: 250, marginTop:20},
   infoSection: { padding: 20 },
   categoryLabel: {
     color: "#888",

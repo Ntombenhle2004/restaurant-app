@@ -146,6 +146,10 @@ export default function ProfileScreen() {
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+       <View style={styles.header}>
+              <Text style={styles.brandTitle}>PROFILE</Text>
+              <View style={styles.dividerGold} />
+            </View>
       <StatusBar style="dark" />
 
       {/* --- CUSTOM LOGOUT MODAL --- */}
@@ -314,11 +318,13 @@ function DetailItem({
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
-  header: {
-    alignItems: "center",
-    paddingVertical: 50,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f4f4f4",
+  header: { alignItems: "center", marginTop: 16, marginBottom: 2 },
+  brandTitle: { fontSize: 24, letterSpacing: 6, fontWeight: "300" },
+  dividerGold: {
+    width: 40,
+    height: 2,
+    backgroundColor: "#9c8966",
+    marginTop: 10,
   },
   topActions: { position: "absolute", right: 25, top: 25 },
   avatarCircle: {
@@ -369,7 +375,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     marginBottom: 10,
     letterSpacing: 2,
-   
   },
   modalSub: { fontSize: 14, color: "#666", marginBottom: 25, lineHeight: 20 },
   modalActions: { flexDirection: "row", justifyContent: "flex-end", gap: 15 },
