@@ -5,9 +5,10 @@ import {
   FlatList,
   TextInput,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { useEffect, useState } from "react";
-import { collection, getDocs, doc, getDoc } from "firebase/firestore";
+import { collection, getDocs, orderBy, query } from "firebase/firestore";
 import { db } from "../../services/firebase";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -15,20 +16,20 @@ type OrderItem = {
   name: string;
   price: number;
   quantity: number;
-  addons?: any[];
-  removables?: any[];
+  description?: string;
 };
 
 type Order = {
   id: string;
-  userId: string;
-  userEmail?: string;
-  userName?: string;
-  phone?: string;
-  deliveryAddress?: string;
-  total: number;
-  createdAt?: any;
+  customerId: string;
+  customerName: string;
+  deliveryAddress: string;
   items: OrderItem[];
+  totalAmount: number; // Matches CheckoutScreen
+  paymentStatus: string;
+  paymentRef: string;
+  orderStatus: string;
+  placedAt: any;
 };
 
 export default function AdminOrders() {
@@ -47,34 +48,16 @@ export default function AdminOrders() {
 
   const loadOrders = async () => {
     try {
-      const snap = await getDocs(collection(db, "orders"));
+      const q = query(collection(db, "orders"), orderBy("placedAt", "desc"));
+      const snap = await getDocs(q);
 
-      const ordersWithUsers: Order[] = await Promise.all(
-        snap.docs.map(async (d) => {
-          const orderData = d.data() as Omit<Order, "id">;
+      const ordersList: Order[] = snap.docs.map((d) => ({
+        id: d.id,
+        ...(d.data() as Omit<Order, "id">),
+      }));
 
-          let userData = {};
-          if (orderData.userId) {
-            const userSnap = await getDoc(doc(db, "users", orderData.userId));
-
-            if (userSnap.exists()) {
-              userData = userSnap.data();
-            }
-          }
-
-          return {
-            id: d.id,
-            ...orderData,
-            userName: (userData as any)?.name || "N/A",
-            userEmail: (userData as any)?.email || orderData.userEmail || "N/A",
-            phone: (userData as any)?.phone || "N/A",
-            deliveryAddress: (userData as any)?.address || "N/A",
-          };
-        }),
-      );
-
-      setOrders(ordersWithUsers);
-      setFilteredOrders(ordersWithUsers);
+      setOrders(ordersList);
+      setFilteredOrders(ordersList);
     } catch (err) {
       console.error(err);
       Alert.alert("Error", "Failed to load orders");
@@ -89,74 +72,89 @@ export default function AdminOrders() {
       return;
     }
 
-    const query = searchQuery.toLowerCase();
-    const filtered = orders.filter((order, index) => {
-      const orderNumber = (index + 1).toString();
-      const userName = (order.userName || "").toLowerCase();
-
-      return orderNumber.includes(query) || userName.includes(query);
+    const q = searchQuery.toLowerCase();
+    const filtered = orders.filter((order) => {
+      return (
+        order.customerName?.toLowerCase().includes(q) ||
+        order.paymentRef?.toLowerCase().includes(q) ||
+        order.id.toLowerCase().includes(q)
+      );
     });
 
     setFilteredOrders(filtered);
   };
 
-  const getOrderNumber = (orderId: string) => {
-    const index = orders.findIndex((o) => o.id === orderId);
-    return index + 1;
-  };
-
   const renderItem = ({ item }: { item: Order }) => {
-    const orderNumber = getOrderNumber(item.id);
-
     return (
       <View style={styles.card}>
         <View style={styles.orderHeader}>
-          <Text style={styles.orderNumber}>Order #{orderNumber}</Text>
+          <Text style={styles.orderId}>
+            ORDER ID: {item.id.slice(-6).toUpperCase()}
+          </Text>
+          <View
+            style={[
+              styles.statusBadge,
+              {
+                backgroundColor:
+                  item.paymentStatus === "Paid" ? "#e6f4ea" : "#feefe3",
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.statusText,
+                {
+                  color: item.paymentStatus === "Paid" ? "#1e8e3e" : "#d93025",
+                },
+              ]}
+            >
+              {item.paymentStatus}
+            </Text>
+          </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Customer Details</Text>
-
-          <Info label="Name" value={item.userName} />
-          <Info label="Email" value={item.userEmail} />
-          <Info label="Phone" value={item.phone} />
-          <Info label="Delivery" value={item.deliveryAddress} />
+          <Text style={styles.sectionTitle}>CUSTOMER DETAILS</Text>
+          <Info label="Name" value={item.customerName} />
+          <Info label="Address" value={item.deliveryAddress} />
+          <Info label="Payment Ref" value={item.paymentRef} />
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Items</Text>
-
+          <Text style={styles.sectionTitle}>ORDER ITEMS</Text>
           {item.items.map((i, idx) => (
             <View key={idx} style={styles.itemRow}>
               <View style={styles.itemLeft}>
                 <Text style={styles.itemQuantity}>{i.quantity}x</Text>
-                <View style={styles.itemDetails}>
+                <View style={{ flex: 1 }}>
                   <Text style={styles.itemName}>{i.name}</Text>
-
-                  {Array.isArray(i.addons) && i.addons.length > 0 && (
-                    <Text style={styles.addon}>
-                      + {i.addons.map((a) => a.name || a).join(", ")}
-                    </Text>
-                  )}
-
-                  {Array.isArray(i.removables) && i.removables.length > 0 && (
-                    <Text style={styles.removable}>
-                      - No {i.removables.map((r) => r.name || r).join(", ")}
-                    </Text>
+                  {i.description && (
+                    <Text style={styles.itemDesc}>{i.description}</Text>
                   )}
                 </View>
               </View>
-
               <Text style={styles.itemPrice}>
-                R {(i.price * i.quantity).toFixed(2)}
+                R {(Number(i.price) * i.quantity).toFixed(2)}
               </Text>
             </View>
           ))}
         </View>
 
         <View style={styles.totalRow}>
-          <Text style={styles.totalLabel}>Total</Text>
-          <Text style={styles.totalAmount}>R {item.total.toFixed(2)}</Text>
+          <View>
+            <Text style={styles.dateText}>
+              {item.placedAt?.toDate().toLocaleDateString()}{" "}
+              {item.placedAt
+                ?.toDate()
+                .toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+            </Text>
+          </View>
+          <View style={{ alignItems: "flex-end" }}>
+            <Text style={styles.totalLabel}>TOTAL AMOUNT</Text>
+            <Text style={styles.totalAmount}>
+              R {Number(item.totalAmount || 0).toFixed(2)}
+            </Text>
+          </View>
         </View>
       </View>
     );
@@ -165,21 +163,27 @@ export default function AdminOrders() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <Text>Loading orders...</Text>
+        <ActivityIndicator size="large" color="000" />
+        <Text style={{ marginTop: 10, color: "000" }}>
+          Loading orders...
+        </Text>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Orders Management</Text>
-      <Text style={styles.subtitle}>{orders.length} Total Orders</Text>
+    <View style={styles.header}>
+            <Text style={styles.brandTitle}>ORDERS</Text>
+            <View style={styles.dividerGold} />
+          </View>
+  
 
       <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color="#666" />
+        <Ionicons style={styles.seachicon} name="search" size={20} color="#666" />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search order or customer..."
+          placeholder="Search..."
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
@@ -189,6 +193,7 @@ export default function AdminOrders() {
         data={filteredOrders}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
+        contentContainerStyle={{ paddingBottom: 40 }}
       />
     </View>
   );
@@ -202,45 +207,90 @@ const Info = ({ label, value }: { label: string; value?: string }) => (
 );
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: "#F5F5F5" },
+  container: { flex: 1, padding: 16, backgroundColor: "#F8F8F8" },
+  header: { alignItems: "center", marginTop: 1, marginBottom: 20 },
+  brandTitle: { fontSize: 24, letterSpacing: 6, fontWeight: "300" },
+  dividerGold: {
+    width: 45,
+    height: 2,
+    backgroundColor: "#9c8966",
+    marginTop: 10,
+  },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  title: { fontSize: 24, fontWeight: "bold", textAlign: "center" },
-  subtitle: { textAlign: "center", marginBottom: 16, color: "#666" },
+  title: {
+    fontSize: 22,
+    fontWeight: "300",
+    textAlign: "center",
+    letterSpacing: 4,
+    color: "#333",
+  },
+  subtitle: {
+    textAlign: "center",
+    marginBottom: 16,
+    color: "000",
+    fontSize: 12,
+    fontWeight: "600",
+  },
   searchContainer: {
     flexDirection: "row",
-    backgroundColor: "#fff",
+    backgroundColor: "#fcfcfc",
     padding: 12,
-    borderRadius: 10,
+    borderRadius: 8,
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#ddd9d9",
   },
-  searchInput: { flex: 1, marginLeft: 8 },
+  searchInput: { flex: 1, marginLeft: 5 },
+  seachicon: { marginTop: 9 },
   card: {
     backgroundColor: "#fff",
-    padding: 16,
-    borderRadius: 12,
+    padding: 20,
+    borderRadius: 4,
     marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: "000",
+    elevation: 2,
   },
-  orderHeader: { marginBottom: 12 },
-  orderNumber: { fontSize: 18, fontWeight: "bold" },
-  section: { marginBottom: 16 },
-  sectionTitle: { fontWeight: "bold", marginBottom: 6 },
+
+  orderHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 15,
+  },
+  orderId: { fontSize: 10, color: "#aaa", fontWeight: "bold" },
+  statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
+  statusText: { fontSize: 10, fontWeight: "800", textTransform: "uppercase" },
+  section: { marginBottom: 20 },
+  sectionTitle: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "000",
+    marginBottom: 8,
+    letterSpacing: 1,
+  },
   infoRow: { flexDirection: "row", marginBottom: 4 },
-  label: { width: 90, color: "#666" },
-  value: { flex: 1 },
-  itemRow: { flexDirection: "row", justifyContent: "space-between" },
+  label: { width: 100, color: "#888", fontSize: 13 },
+  value: { flex: 1, fontSize: 13, color: "#333", fontWeight: "500" },
+  itemRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
   itemLeft: { flexDirection: "row", flex: 1 },
-  itemQuantity: { marginRight: 8 },
-  itemDetails: { flex: 1 },
-  itemName: { fontWeight: "600" },
-  addon: { color: "green", fontSize: 12 },
-  removable: { color: "red", fontSize: 12 },
-  itemPrice: { fontWeight: "bold" },
+  itemQuantity: { marginRight: 10, fontWeight: "700", color: "000" },
+  itemName: { fontWeight: "600", fontSize: 14 },
+  itemDesc: { fontSize: 11, color: "#999", fontStyle: "italic" },
+  itemPrice: { fontWeight: "bold", fontSize: 14, color: "#444" },
   totalRow: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "flex-end",
     borderTopWidth: 1,
-    paddingTop: 10,
+    borderTopColor: "#f0f0f0",
+    paddingTop: 15,
   },
-  totalLabel: { fontWeight: "bold" },
-  totalAmount: { fontWeight: "bold", fontSize: 16 },
+  dateText: { fontSize: 11, color: "#bbb" },
+  totalLabel: { fontWeight: "800", fontSize: 10, color: "000" },
+  totalAmount: { fontWeight: "300", fontSize: 22, color: "#9c8966" },
 });

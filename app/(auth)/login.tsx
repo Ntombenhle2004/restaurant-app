@@ -68,10 +68,10 @@ export default function LoginScreen() {
       <StatusBar style="dark" />
       <View style={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.brandName}>AMBROSIA</Text>
-          <Text style={styles.subtitle}>Sign in to continue your journey</Text>
+          <Text style={styles.brandTitle}>LOGIN</Text>
+          <View style={styles.dividerGold} />
         </View>
-
+       
         <View style={styles.form}>
           <InputField
             label="Email Address"
@@ -117,9 +117,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 30,
     justifyContent: "center",
   },
-  header: {
-    marginBottom: 50,
-    alignItems: "center",
+  // header: {
+  //   marginBottom: 50,
+  //   alignItems: "center",
+  // },
+  header: { alignItems: "center", },
+  brandTitle: { fontSize: 24, letterSpacing: 6, fontWeight: "300" },
+  dividerGold: {
+    width: 40,
+    height: 2,
+    backgroundColor: "#9c8966",
+    marginTop: 10,
   },
   brandName: {
     fontSize: 40,

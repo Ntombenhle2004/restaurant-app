@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
   },
   foodName: { fontSize: 26, fontWeight: "bold", marginVertical: 5 },
   foodDescription: { fontSize: 15, color: "#666", lineHeight: 20 },
-  basePrice: { fontSize: 22, fontWeight: "700", marginTop: 10 },
+  basePrice: { fontSize: 22, fontWeight: "700", marginTop: 10, color:"#9c8966", },
   extrasSection: { paddingHorizontal: 20, marginTop: 10 },
   extrasTitle: {
     fontSize: 16,

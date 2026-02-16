@@ -98,9 +98,9 @@ export default function RegisterScreen() {
       <StatusBar style="dark" />
       <View style={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.brandName}>AMBROSIA</Text>
-          <Text style={styles.subtitle}>Create your distinguished account</Text>
-        </View>
+                  <Text style={styles.brandTitle}>REGISTER</Text>
+                  <View style={styles.dividerGold} />
+                </View>
 
         <Text style={styles.sectionTitle}>Personal Details</Text>
         <View style={styles.row}>
@@ -200,7 +200,14 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
   content: { paddingHorizontal: 30, paddingVertical: 60 },
-  header: { marginBottom: 40, alignItems: "center" },
+  header: { alignItems: "center", marginBottom: 20 },
+  brandTitle: { fontSize: 24, letterSpacing: 6, fontWeight: "300" },
+  dividerGold: {
+    width: 50,
+    height: 2,
+    backgroundColor: "#9c8966",
+    marginTop: 10,
+  },
   brandName: {
     fontSize: 32,
     fontWeight: "300",
