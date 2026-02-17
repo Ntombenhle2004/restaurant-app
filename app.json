@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "",
+    "name": " AMBROSIA",
     "slug": "restaurant-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -8,25 +8,22 @@
     "scheme": "restaurantapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-
     "ios": {
       "supportsTablet": true
     },
-
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/ChatGPT_Image_Feb_17__2026__12_56_27_PM__1_-removebg-preview.png",
         "backgroundColor": "#000000"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.ntombenhle.restaurantapp"
     },
-
     "web": {
       "output": "static",
       "favicon": "./assets/images/ChatGPT_Image_Feb_17__2026__12_56_27_PM__1_-removebg-preview.png"
     },
-
     "plugins": [
       "expo-router",
       [
@@ -39,10 +36,15 @@
         }
       ]
     ],
-
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "a7ce6406-8854-4474-bc1a-48194b477bcf"
+      }
     }
   }
 }
