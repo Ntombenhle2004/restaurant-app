@@ -5,6 +5,22 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useIsFocused } from "@react-navigation/native";
 import { auth } from "../../services/firebase";
 import { onAuthStateChanged } from "firebase/auth";
+import { Text } from "react-native";
+
+const GOLD_COLOR = "#D4AF37";
+
+const Title = () => (
+  <Text
+    style={{
+      fontSize: 18,
+      fontWeight: "700",
+      letterSpacing: 3,
+      color: GOLD_COLOR,
+    }}
+  >
+    AMBROSIA
+  </Text>
+);
 
 export default function TabsLayout() {
   const [cartCount, setCartCount] = useState(0);
@@ -14,7 +30,7 @@ export default function TabsLayout() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setIsLoggedIn(!!user);
-      loadCartCount(); 
+      loadCartCount();
     });
     return unsubscribe;
   }, []);
@@ -43,22 +59,33 @@ export default function TabsLayout() {
   };
 
   useEffect(() => {
-
     loadCartCount();
     const interval = setInterval(() => {
       loadCartCount();
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isLoggedIn]);
+  }, [isLoggedIn, isFocused]);
 
   return (
     <Tabs
       screenOptions={{
         headerShown: true,
-        tabBarActiveTintColor: "#000",
+        headerTitle: () => <Title />,
+      
+        headerStyle: {
+          backgroundColor: "#000",
+        },
+        headerTintColor: GOLD_COLOR,
+        headerLeft: () => null, // ✅ remove back arrow
+
+        tabBarActiveTintColor: GOLD_COLOR,
         tabBarInactiveTintColor: "#888",
-        tabBarStyle: { borderTopWidth: 0, elevation: 0, shadowOpacity: 0 },
+        tabBarStyle: {
+          borderTopWidth: 0,
+          elevation: 0,
+          shadowOpacity: 0,
+        },
       }}
     >
       <Tabs.Screen
@@ -79,7 +106,10 @@ export default function TabsLayout() {
             <Ionicons name="cart-outline" size={size} color={color} />
           ),
           tabBarBadge: cartCount > 0 ? cartCount : undefined,
-          tabBarBadgeStyle: { backgroundColor: "#000", color: "#fff" },
+          tabBarBadgeStyle: {
+            backgroundColor: GOLD_COLOR,
+            color: "#000",
+          },
         }}
       />
 
@@ -92,6 +122,8 @@ export default function TabsLayout() {
           ),
         }}
       />
+
+      {/* Hidden routes */}
       <Tabs.Screen name="food-details" options={{ href: null }} />
       <Tabs.Screen name="checkout" options={{ href: null }} />
     </Tabs>

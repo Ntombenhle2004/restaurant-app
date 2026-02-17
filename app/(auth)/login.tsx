@@ -13,7 +13,6 @@ import { auth, db } from "../../services/firebase";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 
-// Import your custom components
 import InputField from "../components/InputField";
 import PrimaryButton from "../components/PrimaryButton";
 
@@ -75,7 +74,6 @@ export default function LoginScreen() {
         <View style={styles.form}>
           <InputField
             label="Email Address"
-            // placeholder="e.g. user@ambrosia.com"
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
@@ -83,7 +81,6 @@ export default function LoginScreen() {
 
           <InputField
             label="Password"
-            // placeholder="••••••••"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
@@ -117,10 +114,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 30,
     justifyContent: "center",
   },
-  // header: {
-  //   marginBottom: 50,
-  //   alignItems: "center",
-  // },
   header: { alignItems: "center", },
   brandTitle: { fontSize: 24, letterSpacing: 6, fontWeight: "300" },
   dividerGold: {

@@ -44,9 +44,9 @@ export default function PrimaryButton({
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: "#000", // Solid black for luxury
+    backgroundColor: "#000", 
     paddingVertical: 18,
-    borderRadius: 2, // Minimalist sharp corners
+    borderRadius: 2, 
     marginTop: 10,
     marginBottom: 12,
     alignItems: "center",
@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontWeight: "600",
     fontSize: 14,
-    letterSpacing: 2, // Elegant spacing
+    letterSpacing: 2, 
     textTransform: "uppercase",
   },
   secondaryText: {

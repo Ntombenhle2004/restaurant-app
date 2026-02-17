@@ -208,13 +208,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#9c8966",
     marginTop: 10,
   },
-  brandName: {
-    fontSize: 32,
-    fontWeight: "300",
-    letterSpacing: 8,
-    color: "#000",
-    fontFamily: Platform.OS === "ios" ? "Optima" : "serif",
-  },
   subtitle: {
     fontSize: 11,
     color: "#888",

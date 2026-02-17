@@ -26,7 +26,7 @@ type Food = {
 };
 
 const APP_COLOR = "#000";
-const GOLD_COLOR = "#9c8966";
+const GOLD_COLOR = "#D4AF37";
 const CATEGORIES = [
   "All",
   "Burgers",
@@ -117,20 +117,19 @@ export default function HomeScreen() {
         ListHeaderComponent={
           <>
             <View style={styles.headerTextContainer}>
-              <Text style={styles.brandTitle}>AMBROSIA</Text>
               <Text style={styles.welcomeText}>
                 {userName
-                  ? `Welcome back, ${userName}`
+                  ? `HELLO ${userName}`
                   : "Welcome to the Immortals"}
               </Text>
-              <Text style={styles.subTitle}>Select your feast today</Text>
+              <Text style={styles.subTitle}>What do you want to eat today?</Text>
             </View>
 
             <View style={styles.searchContainer}>
               <View style={styles.searchBox}>
                 <Icon name="search" type="feather" color="#999" size={18} />
                 <TextInput
-                  placeholder="Search our kitchen..."
+                  placeholder="Search..."
                   value={search}
                   onChangeText={setSearch}
                   style={styles.searchInput}
@@ -203,20 +202,14 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   listContent: { paddingHorizontal: 20, paddingBottom: 40 },
-  headerTextContainer: { marginTop: 30, marginBottom: 20 },
-  brandTitle: {
-    fontSize: 10,
-    letterSpacing: 5,
-    color: GOLD_COLOR,
-    fontWeight: "700",
-    marginBottom: 12,
-  },
+  headerTextContainer: { marginTop: 20, marginBottom: 20 },
+
   welcomeText: {
     fontSize: 14,
     color: "#999",
     letterSpacing: 1,
     textTransform: "uppercase",
-    marginBottom: 4,
+    marginBottom: 8,
   },
   subTitle: {
     fontSize: 28,
@@ -224,7 +217,7 @@ const styles = StyleSheet.create({
     color: "#1a1a1a",
     lineHeight: 34,
   },
-  searchContainer: { marginVertical: 15 },
+  searchContainer: { marginVertical: 15, },
   searchBox: {
     flexDirection: "row",
     alignItems: "center",
@@ -242,7 +235,6 @@ const styles = StyleSheet.create({
     color: "#000",
     ...Platform.select({
       web: {
-        // Cast to 'any' to bypass strict TextStyle check for web-only properties
         outlineStyle: "none" as any,
       },
     }),
@@ -286,8 +278,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#999",
     fontStyle: "italic",
-    marginTop: 1, 
-    paddingRight: 50, 
+    marginTop: 1,
+    paddingRight: 50,
   },
   price: { fontSize: 14, color: GOLD_COLOR, marginTop: 4, fontWeight: "700" },
 });

@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   loader: { flex: 1, justifyContent: "center" },
-  mainImage: { width: "100%", height: 250, marginTop:20},
+  mainImage: { width: "100%", height: 250, marginTop: 20 },
   infoSection: { padding: 20 },
   categoryLabel: {
     color: "#888",
@@ -319,7 +319,12 @@ const styles = StyleSheet.create({
   },
   foodName: { fontSize: 26, fontWeight: "bold", marginVertical: 5 },
   foodDescription: { fontSize: 15, color: "#666", lineHeight: 20 },
-  basePrice: { fontSize: 22, fontWeight: "700", marginTop: 10, color:"#9c8966", },
+  basePrice: {
+    fontSize: 22,
+    fontWeight: "700",
+    marginTop: 10,
+    color: "#D4AF37",
+  },
   extrasSection: { paddingHorizontal: 20, marginTop: 10 },
   extrasTitle: {
     fontSize: 16,

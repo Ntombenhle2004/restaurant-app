@@ -262,9 +262,9 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1,
     marginBottom: 15,
-    textAlign: "right", 
-    alignSelf: "flex-end", 
-    width: "100%", 
+    textAlign: "right",
+    alignSelf: "flex-end",
+    width: "100%",
     paddingRight: 20,
   },
   itemCard: {
@@ -326,7 +326,7 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   totalLabel: { fontSize: 12, color: "#888", letterSpacing: 1 },
-  totalValue: { fontSize: 18, fontWeight: "700", color: GOLD_COLOR },
+  totalValue: { fontSize: 18, fontWeight: "700", color: "#D4AF37" },
   checkoutBtn: {
     backgroundColor: APP_COLOR,
     paddingVertical: 18,
