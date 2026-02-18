@@ -143,12 +143,12 @@ export default function CartScreen() {
     return (
       <View style={styles.empty}>
         <Icon name="shopping-bag" type="feather" size={60} color="#eee" />
-        <Text style={styles.emptyText}>YOUR TABLE IS EMPTY</Text>
+        <Text style={styles.emptyText}>YOUR CART IS EMPTY</Text>
         <TouchableOpacity
           style={styles.startShopping}
           onPress={() => router.push("/home")}
         >
-          <Text style={styles.startText}>SELECT A FEAST</Text>
+          <Text style={styles.startText}>ADD ITEMS</Text>
         </TouchableOpacity>
       </View>
     );
