@@ -233,7 +233,7 @@ export default function CartScreen() {
                 "Login Required",
                 "Please login to proceed with your order.",
               );
-              router.push("/profileScreen");
+              router.push("/cart");
             } else {
               router.push("/checkout");
             }
