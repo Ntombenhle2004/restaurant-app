@@ -1,3 +1,5 @@
+<img src="https://socialify.git.ci/Ntombenhle2004/restaurant-app/image?language=1&owner=1&name=1&stargazers=1&theme=Light" alt="restaurant-app" width="640" height="320" />
+
 #  AMBROSIA Restaurant App
 
 AMBROSIA is a modern mobile restaurant application built using **React Native (Expo)** that allows users to browse meals, place orders, and make secure payments. The app provides a smooth food ordering experience with an elegant user interface and real-time data management powered by Firebase.
