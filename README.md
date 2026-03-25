@@ -85,6 +85,12 @@ Start development server:
 npm start
 ```
 
+## Admin Login Details
+```bash
+Email : admin@1.com
+password : 123456
+```
+
 ##  Payment Integration (Paystack)
 
 The app uses **react-native-paystack-webview** for secure online payments.
